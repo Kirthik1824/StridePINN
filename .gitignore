@@ -1,0 +1,22 @@
+# Data (download via data/download_daphnet.py, preprocess via data/preprocess.py)
+data/raw/
+data/processed/
+
+# Training outputs
+checkpoints/
+results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -220,5 +220,5 @@ def make_dataloader(
         sampler=sampler,
         drop_last=False,
         num_workers=0,
-        pin_memory=True,
+        pin_memory=torch.cuda.is_available(),
     )
