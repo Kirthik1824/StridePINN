@@ -131,11 +131,11 @@ L = L_data + λ_cyc · L_cyc + λ_φ · L_φ + λ_s · L_s
 
 | Item | Report States | Code Implements | Impact |
 |:---|:---|:---|:---|
-| ODE solver | DOPRI5 (adaptive) | RK4 (fixed-step) | Speed optimisation; revert for final run |
-| Backprop | Adjoint method | Standard odeint | Same reason |
-| Batch size | 128 | 1024 | Same reason |
-| CNN dropout | Layer 4: Drop(0.5) | Drop(0.3) everywhere | Report typo |
-| Integration range | [0, 3.2] s | [0, 1] normalised | Functionally equivalent |
+| ODE solver | DOPRI5 (adaptive) | RK4 (fixed-step) | Speed optimisation |
+| Backprop | Adjoint method | Standard odeint | Speed optimisation |
+| Batch size | 128 | 1024 | Speed optimisation |
+| PINN Epochs | 100 epochs, $T_{\max}=100$ | 50 epochs, $T_{\max}=50$ | Faster convergence |
+| Integration range | [0, 3.2] s | [0, 1] normalised | Effectively equivalent |
 | Δt in residual | 0.025 s | 1/(T−1) ≈ 0.00787 | Scaled; thresholds compensate |
 
 ---
