@@ -367,7 +367,7 @@ def generate_all_visualizations(fold: int = 1):
 
         # Find test subject windows
         test_mask = dataset.subject_ids == fold
-        test_w = apply_normalisation(dataset.windows[test_mask], mean, std)
+        test_w = apply_normalisation(dataset.windows[test_mask].to(device), mean, std)
         test_l = dataset.labels[test_mask]
 
         normal_w = test_w[test_l == 0]

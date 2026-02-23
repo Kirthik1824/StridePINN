@@ -15,7 +15,7 @@ Total parameters: ~5k (30× fewer than CNN-LSTM)
 import torch
 import torch.nn as nn
 import numpy as np
-from torchdiffeq import odeint_adjoint as odeint
+from torchdiffeq import odeint
 
 
 # -----------------------------------------------------------------
@@ -132,15 +132,17 @@ class GaitPINN(nn.Module):
         encoder_hidden: int = 64,
         ode_hidden: int = 32,
         decoder_out: int = 3,
-        ode_method: str = "dopri5",
+        ode_method: str = "rk4",
         ode_rtol: float = 1e-4,
         ode_atol: float = 1e-5,
+        ode_step_size: float = 0.1,
     ):
         super().__init__()
         self.latent_dim = latent_dim
         self.ode_method = ode_method
         self.ode_rtol = ode_rtol
         self.ode_atol = ode_atol
+        self.ode_step_size = ode_step_size
 
         self.encoder = GaitEncoder(in_dim, encoder_hidden, latent_dim)
         self.ode_func = NeuralODEFunc(latent_dim, ode_hidden)
@@ -174,6 +176,10 @@ class GaitPINN(nn.Module):
             # Normalise to [0, 1] for numerical stability of ODE
             t_span = torch.linspace(0, 1, T, device=x.device, dtype=x.dtype)
 
+        options = {}
+        if self.ode_method in ["rk4", "euler"]:
+            options["step_size"] = self.ode_step_size
+
         # Integrate the Neural ODE
         z_traj = odeint(
             self.ode_func,
@@ -182,6 +188,7 @@ class GaitPINN(nn.Module):
             method=self.ode_method,
             rtol=self.ode_rtol,
             atol=self.ode_atol,
+            options=options,
         )  # (T, B, 2)
 
         # Decode each latent state → ankle accel

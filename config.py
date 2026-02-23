@@ -96,14 +96,15 @@ class Config:
     lambda_smooth: float = 0.1
 
     # ODE solver
-    ode_method: str = "dopri5"
-    ode_rtol: float = 1e-3          # Loosened from 1e-4 for speed
-    ode_atol: float = 1e-4          # Loosened from 1e-5 for speed
+    ode_method: str = "rk4"         # Switched from dopri5 for speed
+    ode_rtol: float = 1e-3
+    ode_atol: float = 1e-4
+    ode_step_size: float = 0.1      # Fixed step size for solvers like rk4
 
     # ----------------------------------------------------------------
     #  Training
     # ----------------------------------------------------------------
-    batch_size: int = 128
+    batch_size: int = 1024          # Increased from 128 to saturate GPU
     num_epochs: int = 50            # Reduced from 100 (PINN converges fast)
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5

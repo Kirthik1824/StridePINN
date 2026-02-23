@@ -109,6 +109,7 @@ def train_one_fold(
         ode_method=cfg.ode_method,
         ode_rtol=cfg.ode_rtol,
         ode_atol=cfg.ode_atol,
+        ode_step_size=cfg.ode_step_size,
     ).to(device)
 
     optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=cfg.weight_decay)
