@@ -86,14 +86,18 @@ class Config:
     #  Model — PINN
     # ----------------------------------------------------------------
     latent_dim: int = 2
-    encoder_hidden: int = 64
-    ode_hidden: int = 32
+    encoder_hidden: int = 128        # Increased from 64
+    ode_hidden: int = 64            # Increased from 32
     decoder_out: int = 3            # reconstruct ankle (3 axes)
 
     # Physics loss weights
     lambda_cyc: float = 1.0
     lambda_phi: float = 10.0
     lambda_smooth: float = 0.1
+
+    # PINN Warmup
+    pinn_warmup_epochs: int = 10    # Epochs with data loss only
+    pinn_scheduler_steps: int = 10  # Epochs to ramp up physics losses
 
     # ODE solver
     ode_method: str = "rk4"         # Switched from dopri5 for speed
@@ -105,12 +109,12 @@ class Config:
     #  Training
     # ----------------------------------------------------------------
     batch_size: int = 1024          # Increased from 128 to saturate GPU
-    num_epochs: int = 50            # Reduced from 100 (PINN converges fast)
+    num_epochs: int = 70            # Increased from 50 to accommodate warmup
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5
-    cosine_t_max: int = 50
+    cosine_t_max: int = 70
     grad_clip_norm: float = 1.0
-    early_stop_patience: int = 10   # Tighter patience
+    early_stop_patience: int = 15   # Tighter patience
 
     # ----------------------------------------------------------------
     #  Reproducibility

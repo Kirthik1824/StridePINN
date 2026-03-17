@@ -54,6 +54,9 @@ def parse_args():
     p.add_argument("--folds", type=int, default=cfg.num_subjects)
     p.add_argument("--seed", type=int, default=cfg.seed)
     p.add_argument("--latent_dim", type=int, default=cfg.latent_dim)
+    p.add_argument("--lambda_cyc", type=float, default=cfg.lambda_cyc)
+    p.add_argument("--lambda_phi", type=float, default=cfg.lambda_phi)
+    p.add_argument("--lambda_smooth", type=float, default=cfg.lambda_smooth)
     return p.parse_args()
 
 
@@ -124,6 +127,19 @@ def train_one_fold(
         epoch_losses = {"total": 0, "data": 0, "cyc": 0, "phi": 0, "smooth": 0}
         n_batches = 0
 
+        # --- Calculate scheduled weights ---
+        warmup = cfg.pinn_warmup_epochs
+        steps = cfg.pinn_scheduler_steps
+        
+        if epoch <= warmup:
+            w_cyc = w_phi = w_smooth = 0.0
+        else:
+            # Linear ramp-up
+            ramp = min(1.0, (epoch - warmup) / steps)
+            w_cyc = args.lambda_cyc * ramp
+            w_phi = args.lambda_phi * ramp
+            w_smooth = args.lambda_smooth * ramp
+
         for batch in train_loader:
             windows, ankle, _ = batch
             windows = windows.to(device)
@@ -132,9 +148,9 @@ def train_one_fold(
             try:
                 losses = model.compute_loss(
                     windows, ankle,
-                    lambda_cyc=cfg.lambda_cyc,
-                    lambda_phi=cfg.lambda_phi,
-                    lambda_smooth=cfg.lambda_smooth,
+                    lambda_cyc=w_cyc,
+                    lambda_phi=w_phi,
+                    lambda_smooth=w_smooth,
                 )
 
                 optimizer.zero_grad()
@@ -148,7 +164,7 @@ def train_one_fold(
 
             except RuntimeError as e:
                 if "underflow" in str(e).lower() or "overflow" in str(e).lower():
-                    logger.warning(f"  ODE solver error at epoch {epoch}: {e}")
+                    logger.warning(f"  Epoch {epoch}: ODE solver error: {e}")
                     continue
                 raise
 
@@ -165,9 +181,9 @@ def train_one_fold(
                 f"  Epoch {epoch:3d} — "
                 f"total={avg_loss:.4f}, "
                 f"data={epoch_losses['data']/n_batches:.4f}, "
-                f"cyc={epoch_losses['cyc']/n_batches:.4f}, "
-                f"phi={epoch_losses['phi']/n_batches:.5f}, "
-                f"smooth={epoch_losses['smooth']/n_batches:.5f}"
+                f"cyc={epoch_losses['cyc']/n_batches:.4f} (w={w_cyc:.2f}), "
+                f"phi={epoch_losses['phi']/n_batches:.5f} (w={w_phi:.2f}), "
+                f"smooth={epoch_losses['smooth']/n_batches:.5f} (w={w_smooth:.2f})"
             )
 
         if avg_loss < best_loss:
@@ -275,7 +291,7 @@ def main():
 
     logger.info(f"Device: {device}")
     logger.info(f"Latent dim: {args.latent_dim}, Epochs: {args.epochs}, Folds: {args.folds}")
-    logger.info(f"Loss weights: λ_cyc={cfg.lambda_cyc}, λ_φ={cfg.lambda_phi}, λ_s={cfg.lambda_smooth}")
+    logger.info(f"Loss weights: λ_cyc={args.lambda_cyc}, λ_φ={args.lambda_phi}, λ_s={args.lambda_smooth}")
 
     # Load dataset
     dataset = GaitDataset()

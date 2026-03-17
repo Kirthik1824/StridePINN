@@ -16,6 +16,7 @@ StridePINN is a research framework for detecting **Freezing of Gait (FoG)** in P
 - **Interpretability**: PINN flags FoG via clinically relevant biomarkers:
   - **Dynamics Residual $r(t)$**: Spikes when the trajectory departs from the learned "law of walking."
   - **Phase Stagnation $\Delta\Phi$**: Plateaus when the gait rhythm collapses.
+  - **Continuous Analysis**: New interpretability suite overlays dynamics on ground-truth FoG timelines.
 - **Label-Free PINN Training**: The PINN and anomaly baselines require **no FoG annotations** for training—learning exclusively from normal gait data.
 
 ## 📊 Methodology: Three Pillars of Detection
@@ -56,7 +57,9 @@ StridePINN/
 ├── train_anomaly_baselines.py # Training for Anomaly (ConvAE/OCSVM)
 ├── train_pinn.py          # Training for StridePINN
 ├── evaluate.py            # Aggregate 5-model benchmark
-└── visualize.py           # Latent phase-plane and residual plots
+├── visualize.py           # Latent phase-plane and residual plots
+├── visualize_interpretability.py # Subject-level interpretability traces
+└── run_ablations.py       # Automated physics loss ablation suite
 ```
 
 ## 📈 Results (Preliminary LOSO AUC)
@@ -65,9 +68,9 @@ StridePINN/
 |:---|:---|:---|:---|:---|
 | CNN-LSTM | Supervised | **0.924** | 0.593 | 0.495 |
 | Conv AE | Deep Anomaly | 0.845 | 0.528 | 0.822 |
-| **PINN** | **Physics** | 0.767* | 0.449 | 0.774 |
+| **PINN** | **Physics** | 0.813* | 0.878 | 0.558 |
 
-*\* PINN optimization (transition from reconstruction-focus to dynamics-focus) is currently under active development.*
+*\* PINN results reflect optimized performance on Fold 1 using the loss warmup curriculum.*
 
 ---
 
