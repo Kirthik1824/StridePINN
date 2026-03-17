@@ -177,3 +177,27 @@ L = L_data + λ_cyc · L_cyc + λ_φ · L_φ + λ_s · L_s
 - **Ablation Insight**: Physics losses (especially $L_\Phi$) are critical for maintaining high F1 scores despite slightly lower raw AUC vs. data-only models.
 - **Biomarker Validation**: `visualize_interpretability.py` confirms that Dynamics Residuals $r(t)$ spike and Phase Advance $\Delta\Phi$ stagnates during clinician-labeled FoG episodes.
 - **Next Step**: Conduct full 10-fold LOSO sweep with the optimized configuration.
+
+---
+
+## Entry 3 — 2026-03-17 (Final Aggregate Evaluation)
+
+**Status**: Completed full 10-fold LOSO evaluation. Codebase refactored for modularity.
+
+### Major Updates
+- **Modular Training**: Trainers moved to `training/` with unit-specific logic. Unified entry point via `train.py`.
+- **Visualization Suite**: Optimized `visualize.py` for multi-subject analysis; added latent trajectory overlays.
+- **Aggregate Results**: Reconciled single-fold optimization with full LOSO cross-validation.
+
+### Final Results (8-fold mean for AUC, 10-fold mean for others)
+
+| Model | AUC | Se | Sp | F1 |
+|:---|:---|:---|:---|:---|
+| **CNN-LSTM** | **0.958 ± 0.04** | 0.813 ± 0.12 | 0.822 ± 0.08 | 0.542 ± 0.15 |
+| **Conv AE** | 0.845 ± 0.08 | 0.528 ± 0.44 | 0.822 ± 0.12 | 0.280 ± 0.26 |
+| **PINN** | 0.552 ± 0.13 | 0.449 ± 0.38 | 0.774 ± 0.15 | 0.222 ± 0.21 |
+
+### Key Takeaways
+1. **CNN-LSTM dominates**: Supervised models remain superior in raw performance, benefiting from large labeled FoG datasets.
+2. **PINN Generalization**: While PINN achieves >0.8 AUC on specific subjects (e.g., S01/Fold 1), it struggles with subject-specific gait variance across the full cohort.
+3. **Interpretability**: PINN provides unique dynamical biomarkers ($r(t)$ and $\Delta\Phi$) that offer qualitative insights into "how" the gait is collapsing, even where statistical performance is lower.
