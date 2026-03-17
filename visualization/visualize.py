@@ -13,7 +13,10 @@ All plots saved to results/figures/.
 """
 
 import json
+import sys
 from pathlib import Path
+# Add project root to path so we can import from parent dir
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import numpy as np
 import torch

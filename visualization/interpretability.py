@@ -1,7 +1,12 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 from pathlib import Path
+
+# Add project root to path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from config import cfg
 from models.pinn import GaitPINN
 from data.dataset import GaitDataset, apply_normalisation, normalise_fold

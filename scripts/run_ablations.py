@@ -7,7 +7,8 @@ def run_experiment(lambda_cyc, lambda_phi, lambda_smooth, name):
     print(f"\n>>> Running Ablation: {name} (cyc={lambda_cyc}, phi={lambda_phi}, smooth={lambda_smooth})")
     
     cmd = [
-        "python3", "train_pinn.py",
+        "python3", "train.py",
+        "--model", "pinn",
         "--folds", "1",
         "--epochs", "25",
         "--lambda_cyc", str(lambda_cyc),
