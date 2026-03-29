@@ -136,6 +136,32 @@ def apply_normalisation(
     return (windows - mean) / std
 
 
+def apply_per_subject_normalization(
+    windows: torch.Tensor,
+    subject_ids: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Normalise each subject's data independently.
+    This corrects for individual sensor mounting biases and physiological differences.
+    """
+    normalized = torch.zeros_like(windows)
+    unique_subjects = torch.unique(subject_ids)
+    
+    for sid in unique_subjects:
+        mask = (subject_ids == sid)
+        if not mask.any(): continue
+        
+        subj_data = windows[mask]  # (N_s, 128, 9)
+        flat = subj_data.reshape(-1, windows.shape[-1])
+        
+        mean = flat.mean(dim=0)
+        std = flat.std(dim=0).clamp(min=1e-8)
+        
+        normalized[mask] = (subj_data - mean) / std
+        
+    return normalized
+
+
 def augment_fog_windows(
     windows: torch.Tensor,
     ankle: torch.Tensor,

@@ -8,6 +8,7 @@ from data.dataset import (
     get_loso_splits,
     normalise_fold,
     apply_normalisation,
+    apply_per_subject_normalization,
     make_dataloader,
 )
 from utils import (
@@ -20,35 +21,43 @@ from utils import (
 def prepare_fold_data(dataset, fold_info, device, normal_only=False):
     """
     Common data preparation for a LOSO fold.
+    Now uses per-subject normalization to account for inter-patient sensor shift.
     """
-    mean, std = normalise_fold(dataset, fold_info["train_idx"])
-
-    # Train data
+    # 1. Apply Per-Subject Normalization to the whole dataset slice for this fold
+    # This prevents Subject A's bias from affecting Subject B's limit cycle origin.
+    
+    # Train
     train_idx = fold_info["train_idx"]
     if normal_only:
         train_mask_normal = dataset.labels[train_idx] == 0
         train_idx = train_idx[train_mask_normal.numpy()]
-
-    train_w = apply_normalisation(dataset.windows[train_idx], mean, std)
-    train_a = apply_normalisation(dataset.ankle[train_idx], mean[:3], std[:3])
+    
+    train_w = apply_per_subject_normalization(dataset.windows[train_idx], dataset.subject_ids[train_idx])
+    train_a = apply_per_subject_normalization(dataset.ankle[train_idx], dataset.subject_ids[train_idx])
     train_l = dataset.labels[train_idx]
+    
+    # Val
+    val_idx = fold_info["val_idx"]
+    val_w = apply_per_subject_normalization(dataset.windows[val_idx], dataset.subject_ids[val_idx])
+    val_a = apply_per_subject_normalization(dataset.ankle[val_idx], dataset.subject_ids[val_idx])
+    val_l = dataset.labels[val_idx]
+    
+    # Test
+    test_idx = fold_info["test_idx"]
+    test_w = apply_per_subject_normalization(dataset.windows[test_idx], dataset.subject_ids[test_idx])
+    test_a = apply_per_subject_normalization(dataset.ankle[test_idx], dataset.subject_ids[test_idx])
+    test_l = dataset.labels[test_idx]
 
-    # Val data
-    val_w = apply_normalisation(dataset.windows[fold_info["val_idx"]], mean, std)
-    val_a = apply_normalisation(dataset.ankle[fold_info["val_idx"]], mean[:3], std[:3])
-    val_l = dataset.labels[fold_info["val_idx"]]
-
-    # Test data
-    test_w = apply_normalisation(dataset.windows[fold_info["test_idx"]], mean, std)
-    test_a = apply_normalisation(dataset.ankle[fold_info["test_idx"]], mean[:3], std[:3])
-    test_l = dataset.labels[fold_info["test_idx"]]
+    # Dummy mean/std to maintain signature compatibility
+    dummy_mean = torch.zeros(cfg.num_channels)
+    dummy_std = torch.ones(cfg.num_channels)
 
     return {
         "train": (train_w, train_a, train_l),
         "val": (val_w, val_a, val_l),
         "test": (test_w, test_a, test_l),
-        "mean": mean,
-        "std": std,
+        "mean": dummy_mean,
+        "std": dummy_std,
     }
 
 def aggregate_and_save_results(all_results, model_name, logger):

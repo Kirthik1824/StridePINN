@@ -88,12 +88,13 @@ class Config:
     latent_dim: int = 2
     encoder_hidden: int = 128        # Increased from 64
     ode_hidden: int = 64            # Increased from 32
-    decoder_out: int = 3            # reconstruct ankle (3 axes)
+    decoder_out: int = 9            # reconstruct ALL accel channels
 
     # Physics loss weights
-    lambda_cyc: float = 1.0
+    lambda_cyc: float = 0.0         # Disabled because 3s window @ 1.5Hz = 4.5 cycles (z_end opposes z_start)
     lambda_phi: float = 10.0
     lambda_smooth: float = 0.1
+    lambda_radius: float = 10.0     # Massively upweighted to prevent r=0 collapse
 
     # PINN Warmup
     pinn_warmup_epochs: int = 10    # Epochs with data loss only
@@ -101,6 +102,7 @@ class Config:
 
     # ODE solver
     ode_method: str = "rk4"         # Switched from dopri5 for speed
+    ode_mode: str = "hopf"          # Hopf normal form ODE (default)
     ode_rtol: float = 1e-3
     ode_atol: float = 1e-4
     ode_step_size: float = 0.1      # Fixed step size for solvers like rk4
@@ -109,10 +111,10 @@ class Config:
     #  Training
     # ----------------------------------------------------------------
     batch_size: int = 1024          # Increased from 128 to saturate GPU
-    num_epochs: int = 70            # Increased from 50 to accommodate warmup
+    num_epochs: int = 100           # Increased to accommodate reversed curriculum
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5
-    cosine_t_max: int = 70
+    cosine_t_max: int = 100
     grad_clip_norm: float = 1.0
     early_stop_patience: int = 15   # Tighter patience
 

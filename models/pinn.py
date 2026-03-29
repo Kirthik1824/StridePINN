@@ -4,12 +4,13 @@ pinn.py — Physics-Informed Neural Network for gait dynamics.
 The PINN is a latent-variable model with three jointly trained components:
 
   1. Encoder E_φ : ℝ⁹ → ℝ² — maps first time-step to 2-D latent IC z(0)
-  2. Neural ODE f_θ : ℝ² → ℝ² — autonomous vector field (tanh MLP)
-  3. Decoder D_ψ : ℝ² → ℝ³ — linear map from latent state to ankle accel
+  2. Neural ODE f_θ : ℝ² → ℝ² — Hopf normal form + residual MLP
+  3. Decoder D_ψ : ℝ² → ℝ⁹ — linear map from latent state to all accel channels
 
-Loss = L_data + λ_cyc · L_cyc + λ_φ · L_φ + λ_s · L_s
+Loss = L_data + λ_cyc · L_cyc + λ_φ · L_φ + λ_s · L_s + λ_r · L_radius
 
-Total parameters: ~5k (30× fewer than CNN-LSTM)
+The Hopf normal form provides an inductive bias toward stable limit cycles,
+ensuring the latent dynamics model oscillatory gait patterns.
 """
 
 import torch
@@ -25,10 +26,10 @@ class GaitEncoder(nn.Module):
     """
     MLP encoder: maps a single 9-D IMU observation to a 2-D latent IC.
 
-    Architecture: 9 → 64 → 64 → 2 (ReLU activations)
+    Architecture: 9 → hidden → hidden → 2 (ReLU activations)
     """
 
-    def __init__(self, in_dim: int = 9, hidden: int = 64, latent_dim: int = 2):
+    def __init__(self, in_dim: int = 9, hidden: int = 128, latent_dim: int = 2):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(in_dim, hidden),
@@ -54,59 +55,93 @@ class GaitEncoder(nn.Module):
 # -----------------------------------------------------------------
 class NeuralODEFunc(nn.Module):
     """
-    Smooth autonomous vector field parameterised as a tanh-MLP.
+    Hopf Normal Form ODE with learnable residual correction.
 
-    Architecture: 2 → 32 → 2 (tanh activation)
+    Base dynamics (Hopf normal form):
+        ẋ = α(μ - r²)x - ωy
+        ẏ = α(μ - r²)y + ωx
 
-    tanh is preferred over ReLU because it produces a smooth, bounded
-    vector field — necessary for generating smooth curved orbits
-    (the limit cycle) in the 2-D latent plane.
+    This guarantees a stable limit cycle at radius √μ with angular
+    frequency ω. A small residual MLP adds expressivity for non-ideal
+    oscillator dynamics.
+
+    Modes:
+        - "hopf": Hopf normal form + residual MLP (recommended)
+        - "mlp":  Free-form MLP (original, for ablation)
     """
 
-    def __init__(self, latent_dim: int = 2, hidden: int = 32):
+    def __init__(self, latent_dim: int = 2, hidden: int = 64, mode: str = "hopf"):
         super().__init__()
+        self.mode = mode
+        self.latent_dim = latent_dim
+
+        # Residual MLP (used in both modes)
         self.net = nn.Sequential(
             nn.Linear(latent_dim, hidden),
             nn.Tanh(),
             nn.Linear(hidden, latent_dim),
         )
 
-    def forward(self, t: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            t: scalar time (required by torchdiffeq, unused for autonomous ODE)
-            z: (B, 2) — current latent state
+        if mode == "hopf":
+            # Learnable Hopf parameters
+            self.mu = 1.0  # Fixed target radius² = 1.0
+            self.log_alpha = nn.Parameter(torch.tensor(0.0))
+            self.log_omega = nn.Parameter(torch.tensor(np.log(2.0 * np.pi * 1.5)))
+            self.log_epsilon = nn.Parameter(torch.tensor(-2.0))  # exp(-2)≈0.13, slightly stronger
+            
+            # Learnable center for the limit cycle tracking
+            self.cx = nn.Parameter(torch.tensor(0.0))
+            self.cy = nn.Parameter(torch.tensor(0.0))
 
-        Returns:
-            dz_dt: (B, 2) — time derivative of latent state
-        """
-        return self.net(z)
+    def forward(self, t: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
+        if self.mode == "mlp":
+            return self.net(z)
+
+        # --- Hopf Normal Form ---
+        x, y = z[:, 0], z[:, 1]
+
+        # Constrain parameters
+        mu = self.mu
+        alpha = torch.exp(self.log_alpha)
+        
+        if hasattr(self, 'current_omega') and self.current_omega is not None:
+            omega = self.current_omega
+        else:
+            omega = torch.exp(self.log_omega)
+            
+        epsilon = torch.exp(self.log_epsilon)
+        cx, cy = self.cx, self.cy
+
+        # Center trajectories
+        x_c, y_c = x - cx, y - cy
+        r2 = x_c ** 2 + y_c ** 2 + 1e-8
+
+        # Hopf dynamics relative to center
+        radial = alpha * (mu - r2)
+        dx = radial * x_c - omega * y_c
+        dy = radial * y_c + omega * x_c
+
+        dz_hopf = torch.stack([dx, dy], dim=-1)
+
+        # Add small learned residual for expressivity
+        dz_residual = epsilon * self.net(z)
+
+        dz = dz_hopf + dz_residual
+
+        # Clamp to prevent blow-up during integration
+        return torch.clamp(dz, -20.0, 20.0)
 
 
 # -----------------------------------------------------------------
 #  Stage 3 — Decoder D_ψ
 # -----------------------------------------------------------------
 class GaitDecoder(nn.Module):
-    """
-    Linear decoder: maps latent state → 3-axis ankle acceleration.
-
-    A linear decoder strengthens interpretability: if reconstruction
-    is accurate, the 2-D latent space must itself geometrically encode
-    the gait oscillation.
-    """
-
-    def __init__(self, latent_dim: int = 2, out_dim: int = 3):
+    """Linear decoder from 2D latent to ALL 9 accelerometer channels."""
+    def __init__(self, latent_dim: int = 2, out_dim: int = 9):
         super().__init__()
         self.linear = nn.Linear(latent_dim, out_dim)
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            z: (..., 2) — latent state(s)
-
-        Returns:
-            x_hat: (..., 3) — reconstructed ankle accel
-        """
         return self.linear(z)
 
 
@@ -114,28 +149,18 @@ class GaitDecoder(nn.Module):
 #  Full PINN
 # -----------------------------------------------------------------
 class GaitPINN(nn.Module):
-    """
-    Physics-Informed gait model = Encoder + Neural ODE + Decoder.
-
-    Forward pass:
-      1. Encode first time-step → z(0)
-      2. Integrate ODE over [0, T] → z(t₀), z(t₁), …, z(t_{N-1})
-      3. Decode each z(tₖ) → x̂(tₖ)
-
-    Provides compute_loss() returning the full 4-term physics loss.
-    """
-
     def __init__(
         self,
         in_dim: int = 9,
         latent_dim: int = 2,
-        encoder_hidden: int = 64,
-        ode_hidden: int = 32,
-        decoder_out: int = 3,
+        encoder_hidden: int = 128,
+        ode_hidden: int = 64,
+        decoder_out: int = 9,
         ode_method: str = "rk4",
         ode_rtol: float = 1e-4,
         ode_atol: float = 1e-5,
         ode_step_size: float = 0.1,
+        ode_mode: str = "hopf",
     ):
         super().__init__()
         self.latent_dim = latent_dim
@@ -145,43 +170,58 @@ class GaitPINN(nn.Module):
         self.ode_step_size = ode_step_size
 
         self.encoder = GaitEncoder(in_dim, encoder_hidden, latent_dim)
-        self.ode_func = NeuralODEFunc(latent_dim, ode_hidden)
+        self.ode_func = NeuralODEFunc(latent_dim, ode_hidden, mode=ode_mode)
         self.decoder = GaitDecoder(latent_dim, decoder_out)
+        
+        # Frequency head (predicts cadence drift)
+        self.omega_head = nn.Sequential(
+            nn.Linear(latent_dim, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1)
+        )
 
     def forward(
         self,
         x: torch.Tensor,
         t_span: torch.Tensor = None,
     ) -> dict:
-        """
-        Full forward pass.
-
-        Args:
-            x: (B, T, 9) — full window of 9-channel IMU data
-            t_span: (T,) — query time-points; defaults to [0, 1, ..., T-1]
-
-        Returns:
-            dict with keys:
-              z0:      (B, 2)    — latent initial condition
-              z_traj:  (T, B, 2) — latent trajectory
-              x_hat:   (T, B, 3) — reconstructed ankle accel
-        """
         B, T, C = x.shape
-
-        # Encode the first time-step
-        z0 = self.encoder(x[:, 0, :])   # (B, 9) → (B, 2)
-
-        # Define integration times
+        
+        # 1. Encode every timestep independently (temporal convolution / time-distributed dense)
+        # Flatten time and batch to process through standard Linear layers
+        x_flat = x.reshape(B * T, C)
+        z_data_flat = self.encoder(x_flat)
+        
+        # Reshape and permute back to (T, B, latent_dim) for downstream compatibility
+        z_data = z_data_flat.reshape(B, T, self.latent_dim).permute(1, 0, 2)
+        
+        # 2. Predict adaptive frequency (omega) from the window summary
+        # We use global average pooling of latent features to estimate the window frequency
+        z_mean = z_data.mean(dim=0) # (B, latent_dim)
+        omega_raw = self.omega_head(z_mean).squeeze(-1) # (B,)
+        
+        # Constrain omega to 0.5Hz - 3.0Hz (2.0*pi * freq)
+        # Using a sigmoid-like scaling to center it around 1.5Hz
+        omega = (torch.sigmoid(omega_raw) * 2.5 + 0.5) * (2.0 * np.pi)
+        
+        # 3. Guide Fix: True Neural ODE Rollout
+        # Integrate forward from the encoded initial state z0
         if t_span is None:
-            # Normalise to [0, 1] for numerical stability of ODE
-            t_span = torch.linspace(0, 1, T, device=x.device, dtype=x.dtype)
-
+            # A 128-window at 42.6Hz covers exactly 3.0 seconds
+            # This ensures omega = 2*pi*f matches physical reality in Hz
+            t_span = torch.linspace(0, 3.0, T, device=x.device, dtype=x.dtype)
+            
+        z0 = z_data[0] # (B, latent_dim)
+        
+        # Inject the batch-specific omega into the ODE function state for the integration pass
+        self.ode_func.current_omega = omega
+        
+        # We DO NOT set 'step_size' in options.
+        # By omitting it, torchdiffeq's rk4 uses the dense 128-point t_span grid inherently,
+        # preventing "polygon limit cycles" seen previously with step_size=0.1
         options = {}
-        if self.ode_method in ["rk4", "euler"]:
-            options["step_size"] = self.ode_step_size
-
-        # Integrate the Neural ODE
-        z_traj = odeint(
+            
+        z_traj_ode = odeint(
             self.ode_func,
             z0,
             t_span,
@@ -189,153 +229,139 @@ class GaitPINN(nn.Module):
             rtol=self.ode_rtol,
             atol=self.ode_atol,
             options=options,
-        )  # (T, B, 2)
-
-        # Decode each latent state → ankle accel
-        x_hat = self.decoder(z_traj)   # (T, B, 3)
-
+        )
+        
+        # Clear omega to prevent memory leaks or incorrect routing
+        self.ode_func.current_omega = None
+        
+        # 4. Decode every timestep
+        x_hat_flat = self.decoder(z_data_flat)
+        x_hat = x_hat_flat.reshape(B, T, -1).permute(1, 0, 2)
+        
+        # z_encoded: the data's path (traced out by the encoder frame-by-frame)
+        # z_traj_ode: the mathematically perfect limit cycle rollout
         return {
             "z0": z0,
-            "z_traj": z_traj,
+            "z_encoded": z_data, 
+            "z_traj_ode": z_traj_ode,
             "x_hat": x_hat,
+            "omega": omega,
         }
 
     def compute_loss(
         self,
         x: torch.Tensor,
-        ankle_target: torch.Tensor,
+        target: torch.Tensor,
         lambda_cyc: float = 1.0,
         lambda_phi: float = 10.0,
         lambda_smooth: float = 0.1,
+        lambda_radius: float = 1.0,
     ) -> dict:
-        """
-        Compute the full 4-term physics-informed loss.
-
-        Args:
-            x:             (B, T, 9) — full window
-            ankle_target:  (B, T, 3) — ground-truth ankle acceleration
-            lambda_cyc:    weight for periodicity loss
-            lambda_phi:    weight for phase monotonicity loss
-            lambda_smooth: weight for smoothness regulariser
-
-        Returns:
-            dict with keys: total, data, cyc, phi, smooth (all scalar tensors)
-        """
         out = self.forward(x)
-        z_traj = out["z_traj"]   # (T, B, 2)
-        x_hat = out["x_hat"]     # (T, B, 3)
+        z_encoded = out["z_encoded"]   # (T, B, D)
+        z_traj_ode = out["z_traj_ode"] # (T, B, D)
+        x_hat = out["x_hat"]           # (T, B, out_dim)
 
-        T, B, _ = z_traj.shape
+        x_hat_bt = x_hat.permute(1, 0, 2)
+        L_data = torch.mean((target - x_hat_bt) ** 2)
 
-        # ------------------------------------------------------
-        # L_data — MSE reconstruction of ankle acceleration
-        # ------------------------------------------------------
-        # ankle_target is (B, T, 3); x_hat is (T, B, 3) → permute
-        x_hat_bt = x_hat.permute(1, 0, 2)  # (B, T, 3)
-        L_data = torch.mean((ankle_target - x_hat_bt) ** 2)
-
-        # ------------------------------------------------------
-        # L_cyc — limit-cycle periodicity: ||z(T) - z(0)||²
-        # ------------------------------------------------------
-        z_start = z_traj[0]    # (B, 2)
-        z_end = z_traj[-1]     # (B, 2)
-        L_cyc = torch.mean(torch.sum((z_end - z_start) ** 2, dim=-1))
-
-        # ------------------------------------------------------
-        # L_phi — phase monotonicity (penalise backward rotation)
-        # ------------------------------------------------------
-        # Compute phase angle φ(tₖ) = atan2(z₂, z₁)
-        z_bt = z_traj.permute(1, 0, 2)  # (B, T, 2)
-        phase = torch.atan2(z_bt[:, :, 1], z_bt[:, :, 0])  # (B, T)
-
-        # Unwrap phase differences to handle ±π discontinuities
-        d_phase = phase[:, 1:] - phase[:, :-1]  # (B, T-1)
-        # Wrap to [-π, π]
+        # L_phi — phase monotonicity (using first 2 dims as phase plane)
+        z_bt = z_encoded.permute(1, 0, 2)
+        if hasattr(self.ode_func, 'cx'):
+            cx, cy = self.ode_func.cx, self.ode_func.cy
+            phase = torch.atan2(z_bt[:, :, 1] - cy, z_bt[:, :, 0] - cx)
+        else:
+            phase = torch.atan2(z_bt[:, :, 1], z_bt[:, :, 0])
+            
+        d_phase = phase[:, 1:] - phase[:, :-1]
         d_phase = torch.atan2(torch.sin(d_phase), torch.cos(d_phase))
-
-        # Penalise negative phase increments (backward rotation)
         L_phi = torch.mean(torch.clamp(-d_phase, min=0) ** 2)
 
-        # ------------------------------------------------------
-        # L_s — smoothness: penalise latent acceleration ||z̈||²
-        # Second-order central finite differences
-        # ------------------------------------------------------
-        z_bt2 = z_traj.permute(1, 0, 2)  # (B, T, 2)
-        accel = z_bt2[:, 2:] - 2 * z_bt2[:, 1:-1] + z_bt2[:, :-2]  # (B, T-2, 2)
+        # L_s — smoothness
+        accel = z_bt[:, 2:] - 2 * z_bt[:, 1:-1] + z_bt[:, :-2]
         L_smooth = torch.mean(torch.sum(accel ** 2, dim=-1))
 
-        # ------------------------------------------------------
-        # Total loss
-        # ------------------------------------------------------
-        L_total = (
-            L_data
-            + lambda_cyc * L_cyc
-            + lambda_phi * L_phi
-            + lambda_smooth * L_smooth
-        )
+        # L_radius — force trajectories to live near target radius
+        target_r2 = 1.0
+        if hasattr(self.ode_func, 'cx'):
+            cx, cy = self.ode_func.cx, self.ode_func.cy
+            r2 = (z_encoded[..., 0] - cx)**2 + (z_encoded[..., 1] - cy)**2
+        else:
+            r2 = torch.sum(z_encoded ** 2, dim=-1)  # (T, B)
+        L_radius = torch.mean((r2 - target_r2) ** 2)
+
+        # L_traj — True Neural ODE Rollout Match (Guide Item 6)
+        # Forces the frame-by-frame data representation to align strictly with the limit cycle ODE rollout
+        L_traj = torch.mean((z_traj_ode - z_encoded) ** 2)
+        
+        # Guide Item: Latent Covariance (Isotropy) Loss -- optional but reinforces circular spread
+        B_size = z_bt.shape[0]
+        z_flat = z_bt.reshape(-1, self.latent_dim)
+        z_flat_centered = z_flat - z_flat.mean(dim=0)
+        cov = (z_flat_centered.T @ z_flat_centered) / (z_flat.shape[0] - 1)
+        I = torch.eye(self.latent_dim, device=z_flat.device)
+        # Enforce that the latent space variance is spread as a unit circle 
+        # (the determinant of a circle is identity scaled by radius^2. Since radius ~ 1, cov ~ 0.5*I)
+        L_iso = torch.mean((cov - 0.5 * I) ** 2)
+
+        L_total = (L_data
+                   + lambda_phi * L_phi
+                   + lambda_smooth * L_smooth
+                   + lambda_radius * L_radius
+                   + 10.0 * L_traj  # Rollout structural alignment
+                   + 1.0 * L_iso)   # Geometric decorrelation
 
         return {
             "total": L_total,
             "data": L_data,
-            "cyc": L_cyc,
             "phi": L_phi,
             "smooth": L_smooth,
+            "radius": L_radius,
+            "ode": L_traj, # Renamed internally but keeping dict key 'ode' to avoid breakages in pinn_trainer
         }
 
     def compute_anomaly_scores(self, x: torch.Tensor) -> dict:
-        """
-        Compute FoG detection signals for test windows.
-
-        Two complementary signals:
-          1. Dynamics residual r(t) = ||ż_FD(t) - f_θ(z(t))||
-          2. Total phase advance ΔΦ
-
-        Args:
-            x: (B, T, 9) — test windows
-
-        Returns:
-            dict with keys:
-              residual_max: (B,) — max dynamics residual per window
-              residual_all: (B, T-2) — full residual time-trace
-              phase_advance: (B,) — total unwrapped phase advance
-              phase_all: (B, T) — raw phase angle time-trace
-              z_traj: (T, B, 2) — latent trajectory for plotting
-        """
         with torch.no_grad():
             out = self.forward(x)
-            z_traj = out["z_traj"]    # (T, B, 2)
-            T, B, D = z_traj.shape
+            z_encoded = out["z_encoded"]
+            z_traj_ode = out["z_traj_ode"]
+            T_len, B, D = z_encoded.shape
 
-            z_bt = z_traj.permute(1, 0, 2)  # (B, T, 2)
+            z_bt = z_encoded.permute(1, 0, 2)
+            z_bt_ode = z_traj_ode.permute(1, 0, 2)
 
-            # Dynamics residual via central finite differences
-            # ż_FD(tₖ) = (z(tₖ₊₁) - z(tₖ₋₁)) / (2Δt)
-            # For normalised time t ∈ [0,1], Δt = 1/(T-1)
-            dt = 1.0 / (T - 1)
-            z_dot_fd = (z_bt[:, 2:] - z_bt[:, :-2]) / (2 * dt)  # (B, T-2, 2)
-
-            # f_θ(z(tₖ)) at interior points
-            z_interior = z_bt[:, 1:-1]  # (B, T-2, 2)
-            # Dummy time for autonomous ODE
-            t_dummy = torch.zeros(1, device=x.device)
-            f_pred = self.ode_func(t_dummy, z_interior.reshape(-1, D))  # (B*(T-2), 2)
-            f_pred = f_pred.reshape(B, T - 2, D)
-
-            residual = torch.norm(z_dot_fd - f_pred, dim=-1)  # (B, T-2)
-            residual_max = residual.max(dim=-1).values         # (B,)
-
-            # Phase angle
-            phase = torch.atan2(z_bt[:, :, 1], z_bt[:, :, 0])  # (B, T)
-
-            # Unwrapped phase advance
+            # True Structural Residual: Mathematical divergence between data and Physics prior
+            # Uses the dynamic ODE rollout instead of localized derivative matching
+            residual = torch.norm(z_bt_ode - z_bt, dim=-1)
+            residual_mean = residual.mean(dim=-1)
+            
+            # Phase: departure from expected angular advance
+            if hasattr(self.ode_func, 'cx'):
+                cx, cy = self.ode_func.cx, self.ode_func.cy
+                phase = torch.atan2(z_bt[:, :, 1] - cy, z_bt[:, :, 0] - cx)
+                r2 = (z_bt[..., 0] - cx)**2 + (z_bt[..., 1] - cy)**2
+            else:
+                phase = torch.atan2(z_bt[:, :, 1], z_bt[:, :, 0])
+                r2 = z_bt[..., 0]**2 + z_bt[..., 1]**2
+                
             d_phase = phase[:, 1:] - phase[:, :-1]
             d_phase = torch.atan2(torch.sin(d_phase), torch.cos(d_phase))
-            phase_advance = d_phase.sum(dim=-1)  # (B,)
+            
+            # Expected d_phase is roughly omega * dt
+            # We measure the variance/uncertainty in phase advance
+            phase_var = torch.std(d_phase, dim=-1)
+            
+            # Radius features
+            r = torch.sqrt(r2 + 1e-8)
+            var_r = torch.var(r, dim=-1)
+            mean_abs_r_1 = torch.mean(torch.abs(r - 1.0), dim=-1)
+            mean_r2 = torch.mean(r2, dim=-1)
 
             return {
-                "residual_max": residual_max,
-                "residual_all": residual,
-                "phase_advance": phase_advance,
-                "phase_all": phase,
-                "z_traj": z_traj,
+                "residual_max": residual_mean,
+                "phase_advance": phase_var,
+                "var_r": var_r,
+                "mean_abs_r_1": mean_abs_r_1,
+                "mean_r2": mean_r2,
+                "z_traj": z_encoded,
             }

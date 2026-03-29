@@ -103,8 +103,8 @@ def load_subject_data(subject_id: int, raw_dir: Path) -> pd.DataFrame:
 #  Step 1: Label filtering
 # -----------------------------------------------------------------
 def filter_labels(df: pd.DataFrame) -> pd.DataFrame:
-    """Remove label-1 samples; keep only label 0 (normal) and 2 (FoG)."""
-    return df[df["label"].isin([0, 2])].reset_index(drop=True)
+    """Remove label-0 samples; keep only label 1 (normal walking) and 2 (FoG)."""
+    return df[df["label"].isin([1, 2])].reset_index(drop=True)
 
 
 # -----------------------------------------------------------------
@@ -206,9 +206,9 @@ def label_windows(
     """
     Assign binary labels to windows based on FoG proportion.
 
-    In Daphnet, label 2 = FoG, label 0 = normal.
-    - >50% samples are FoG → label 1
-    - <10% samples are FoG → label 0
+    In Daphnet, label 2 = FoG, label 1 = normal walking.
+    - >50% samples are FoG (label 2) → label 1 (anomaly)
+    - <10% samples are FoG (all or mostly label 1) → label 0 (normal)
     - else → ambiguous, discarded
 
     Returns:

@@ -12,12 +12,13 @@ from data.dataset import GaitDataset, get_loso_splits
 from training.pinn_trainer import train_pinn_fold
 from training.supervised_trainer import train_supervised_fold
 from training.anomaly_trainer import train_anomaly_fold
+from training.hybrid_trainer import train_hybrid_fold
 from training.trainer_utils import aggregate_and_save_results
 
 def parse_args():
     p = argparse.ArgumentParser(description="Unified StridePINN Trainer")
     p.add_argument("--model", type=str, required=True, 
-                   choices=["cnn", "cnn_lstm", "pinn", "conv_ae", "ocsvm"],
+                   choices=["cnn", "cnn_lstm", "pinn", "conv_ae", "ocsvm", "hybrid"],
                    help="Model type to train")
     p.add_argument("--folds", type=int, default=cfg.num_subjects)
     p.add_argument("--epochs", type=int, default=cfg.num_epochs)
@@ -30,6 +31,10 @@ def parse_args():
     p.add_argument("--lambda_cyc", type=float, default=cfg.lambda_cyc)
     p.add_argument("--lambda_phi", type=float, default=cfg.lambda_phi)
     p.add_argument("--lambda_smooth", type=float, default=cfg.lambda_smooth)
+    p.add_argument("--lambda_radius", type=float, default=cfg.lambda_radius)
+    
+    p.add_argument("--ode_mode", type=str, default=cfg.ode_mode, choices=["mlp", "hopf"],
+                   help="ODE vector field mode")
     
     return p.parse_args()
 
@@ -55,6 +60,8 @@ def main():
             res = train_supervised_fold(fold_info, dataset, args.model, args, device, logger)
         elif args.model in ["conv_ae", "ocsvm"]:
             res = train_anomaly_fold(fold_info, dataset, args.model, args, device, logger)
+        elif args.model == "hybrid":
+            res = train_hybrid_fold(fold_info, dataset, args, device, logger)
             
         all_results.append(res)
 

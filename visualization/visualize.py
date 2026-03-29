@@ -246,10 +246,10 @@ def plot_roc_curves(save_name: str = "roc_curves.png"):
     fig_dir = ensure_fig_dir()
     fig, ax = plt.subplots(figsize=(8, 7))
 
-    colors = {"cnn": "steelblue", "cnn_lstm": "forestgreen", "pinn": "crimson"}
-    labels = {"cnn": "1D-CNN", "cnn_lstm": "CNN-LSTM", "pinn": "PINN"}
+    colors = {"cnn": "steelblue", "cnn_lstm": "forestgreen", "pinn": "crimson", "hybrid": "darkorange"}
+    labels = {"cnn": "1D-CNN", "cnn_lstm": "CNN-LSTM", "pinn": "PINN (Physics)", "hybrid": "Hybrid (Physics+ML)"}
 
-    for model_name in ["cnn", "cnn_lstm", "pinn"]:
+    for model_name in ["cnn", "cnn_lstm", "pinn", "hybrid"]:
         results_path = cfg.results_dir / f"{model_name}_results.json"
         if not results_path.exists():
             continue
@@ -257,15 +257,16 @@ def plot_roc_curves(save_name: str = "roc_curves.png"):
         with open(results_path) as f:
             results = json.load(f)
 
-        aucs = [r["test_metrics"]["auc"] for r in results]
+        aucs = [r["test_metrics"]["auc"] for r in results if not np.isnan(r["test_metrics"]["auc"])]
+        if not aucs: continue
         mean_auc = np.mean(aucs)
         std_auc = np.std(aucs)
 
         # Plot mean performance point
         sens_vals = [r["test_metrics"]["sensitivity"] for r in results]
         spec_vals = [r["test_metrics"]["specificity"] for r in results]
-        mean_fpr = 1 - np.mean(spec_vals)
-        mean_tpr = np.mean(sens_vals)
+        mean_fpr = 1 - np.nanmean(spec_vals)
+        mean_tpr = np.nanmean(sens_vals)
 
         ax.scatter(
             mean_fpr, mean_tpr,
@@ -277,15 +278,15 @@ def plot_roc_curves(save_name: str = "roc_curves.png"):
         # Error bars
         ax.errorbar(
             mean_fpr, mean_tpr,
-            xerr=np.std([1 - s for s in spec_vals]),
-            yerr=np.std(sens_vals),
+            xerr=np.nanstd([1 - s for s in spec_vals]),
+            yerr=np.nanstd(sens_vals),
             color=colors[model_name], alpha=0.4, fmt="none",
         )
 
     ax.plot([0, 1], [0, 1], "k--", alpha=0.3, label="Chance")
     ax.set_xlabel("False Positive Rate (1 − Specificity)")
     ax.set_ylabel("True Positive Rate (Sensitivity)")
-    ax.set_title("Model Comparison — ROC Space")
+    ax.set_title("Model Comparison — ROC Space (10-Fold LOSO)")
     ax.legend(loc="lower right")
     ax.grid(True, alpha=0.3)
     ax.set_xlim(-0.02, 1.02)
@@ -305,9 +306,11 @@ def plot_per_subject_performance(save_name: str = "per_subject_performance.png")
     fig_dir = ensure_fig_dir()
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    model_names = ["cnn", "cnn_lstm", "pinn"]
-    colors = ["steelblue", "forestgreen", "crimson"]
-    bar_width = 0.25
+    model_names = ["cnn", "cnn_lstm", "pinn", "hybrid"]
+    colors = ["steelblue", "forestgreen", "crimson", "darkorange"]
+    bar_width = 0.2
+    
+    folds_found = []
 
     for mi, (model_name, color) in enumerate(zip(model_names, colors)):
         results_path = cfg.results_dir / f"{model_name}_results.json"
@@ -319,6 +322,8 @@ def plot_per_subject_performance(save_name: str = "per_subject_performance.png")
 
         folds = [r["fold"] for r in results]
         f1_vals = [r["test_metrics"]["f1"] for r in results]
+        
+        if not folds_found: folds_found = folds
 
         x = np.arange(len(folds)) + mi * bar_width
         ax.bar(x, f1_vals, bar_width, label=model_name.upper().replace("_", "-"),
@@ -327,8 +332,8 @@ def plot_per_subject_performance(save_name: str = "per_subject_performance.png")
     ax.set_xlabel("Test Subject (Fold)")
     ax.set_ylabel("F1 Score")
     ax.set_title("Per-Subject F1 Score Comparison")
-    ax.set_xticks(np.arange(len(folds)) + bar_width)
-    ax.set_xticklabels([f"S{f:02d}" for f in folds])
+    ax.set_xticks(np.arange(len(folds_found)) + 1.5 * bar_width)
+    ax.set_xticklabels([f"S{f:02d}" for f in folds_found])
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
     ax.set_ylim(0, 1.05)
@@ -342,24 +347,25 @@ def plot_per_subject_performance(save_name: str = "per_subject_performance.png")
 # -----------------------------------------------------------------
 #  Main — generate all visualizations
 # -----------------------------------------------------------------
-def generate_all_visualizations(fold: int = 1):
+def generate_all_visualizations(fold: int = 1, latent_dim: int = 2, ode_mode: str = "hopf"):
     """Generate all visualization plots for a specified fold."""
     fig_dir = ensure_fig_dir()
     device = get_device()
-    print(f"\nGenerating visualizations (fold={fold})...")
+    print(f"\nGenerating visualizations (fold={fold}, dim={latent_dim}, mode={ode_mode})...")
 
     # Try to load PINN model for latent-space plots
     pinn_ckpt = cfg.checkpoint_dir / "pinn" / f"fold_{fold:02d}.pt"
     if pinn_ckpt.exists():
-        print("  Loading PINN checkpoint...")
+        print(f"  Loading PINN checkpoint from {pinn_ckpt}...")
         ckpt = torch.load(pinn_ckpt, map_location=device, weights_only=False)
 
         model = GaitPINN(
             in_dim=cfg.num_channels,
-            latent_dim=cfg.latent_dim,
+            latent_dim=latent_dim,
             encoder_hidden=cfg.encoder_hidden,
             ode_hidden=cfg.ode_hidden,
             decoder_out=cfg.decoder_out,
+            ode_mode=ode_mode,
         ).to(device)
         model.load_state_dict(ckpt["model_state"])
         model.eval()
@@ -397,5 +403,7 @@ if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument("--fold", type=int, default=1)
+    p.add_argument("--latent_dim", type=int, default=2)
+    p.add_argument("--ode_mode", type=str, default="hopf")
     args = p.parse_args()
-    generate_all_visualizations(args.fold)
+    generate_all_visualizations(args.fold, latent_dim=args.latent_dim, ode_mode=args.ode_mode)
