@@ -98,7 +98,7 @@ class NeuralODEFunc(nn.Module):
             return self.net(z)
 
         # --- Hopf Normal Form ---
-        x, y = z[:, 0], z[:, 1]
+        x, y = z[..., 0], z[..., 1]
 
         # Constrain parameters
         mu = self.mu
@@ -109,7 +109,6 @@ class NeuralODEFunc(nn.Module):
         else:
             omega = torch.exp(self.log_omega)
             
-        epsilon = torch.exp(self.log_epsilon)
         cx, cy = self.cx, self.cy
 
         # Center trajectories
@@ -121,12 +120,10 @@ class NeuralODEFunc(nn.Module):
         dx = radial * x_c - omega * y_c
         dy = radial * y_c + omega * x_c
 
-        dz_hopf = torch.stack([dx, dy], dim=-1)
-
-        # Add small learned residual for expressivity
-        dz_residual = epsilon * self.net(z)
-
-        dz = dz_hopf + dz_residual
+        # CRITICAL FIX: The residual MLP (self.net) previously acted as a "physics assassin",
+        # learning to perfectly cancel the [dx, dy] rotation so it could minimize L_traj as a static dot.
+        # By exclusively using dz_hopf, we mathematically enforce the limit-cycle topology.
+        dz = torch.stack([dx, dy], dim=-1)
 
         # Clamp to prevent blow-up during integration
         return torch.clamp(dz, -20.0, 20.0)
@@ -204,46 +201,17 @@ class GaitPINN(nn.Module):
         # Using a sigmoid-like scaling to center it around 1.5Hz
         omega = (torch.sigmoid(omega_raw) * 2.5 + 0.5) * (2.0 * np.pi)
         
-        # 3. Guide Fix: True Neural ODE Rollout
-        # Integrate forward from the encoded initial state z0
-        if t_span is None:
-            # A 128-window at 42.6Hz covers exactly 3.0 seconds
-            # This ensures omega = 2*pi*f matches physical reality in Hz
-            t_span = torch.linspace(0, 3.0, T, device=x.device, dtype=x.dtype)
-            
-        z0 = z_data[0] # (B, latent_dim)
-        
-        # Inject the batch-specific omega into the ODE function state for the integration pass
-        self.ode_func.current_omega = omega
-        
-        # We DO NOT set 'step_size' in options.
-        # By omitting it, torchdiffeq's rk4 uses the dense 128-point t_span grid inherently,
-        # preventing "polygon limit cycles" seen previously with step_size=0.1
-        options = {}
-            
-        z_traj_ode = odeint(
-            self.ode_func,
-            z0,
-            t_span,
-            method=self.ode_method,
-            rtol=self.ode_rtol,
-            atol=self.ode_atol,
-            options=options,
-        )
-        
-        # Clear omega to prevent memory leaks or incorrect routing
-        self.ode_func.current_omega = None
+        # 3. We NO LONGER do a full 3.0s rigid ODE rollout here.
+        # Rigid rollouts desynchronize with biological phase micro-jitter,
+        # forcing the encoder to collapse to a static dot.
+        # Instead, we will evaluate the local Vector Field matching in compute_loss!
         
         # 4. Decode every timestep
         x_hat_flat = self.decoder(z_data_flat)
         x_hat = x_hat_flat.reshape(B, T, -1).permute(1, 0, 2)
         
-        # z_encoded: the data's path (traced out by the encoder frame-by-frame)
-        # z_traj_ode: the mathematically perfect limit cycle rollout
         return {
-            "z0": z0,
             "z_encoded": z_data, 
-            "z_traj_ode": z_traj_ode,
             "x_hat": x_hat,
             "omega": omega,
         }
@@ -258,8 +226,7 @@ class GaitPINN(nn.Module):
         lambda_radius: float = 1.0,
     ) -> dict:
         out = self.forward(x)
-        z_encoded = out["z_encoded"]   # (T, B, D)
-        z_traj_ode = out["z_traj_ode"] # (T, B, D)
+        z_encoded = out["z_encoded"]   # (T, B, 2)
         x_hat = out["x_hat"]           # (T, B, out_dim)
 
         x_hat_bt = x_hat.permute(1, 0, 2)
@@ -290,26 +257,38 @@ class GaitPINN(nn.Module):
             r2 = torch.sum(z_encoded ** 2, dim=-1)  # (T, B)
         L_radius = torch.mean((r2 - target_r2) ** 2)
 
-        # L_traj — True Neural ODE Rollout Match (Guide Item 6)
-        # Forces the frame-by-frame data representation to align strictly with the limit cycle ODE rollout
-        L_traj = torch.mean((z_traj_ode - z_encoded) ** 2)
+        # L_ode -- Latent Vector Field Alignment
+        # Instead of a global 3.0s rigid rollout (which breaks against biological jitter),
+        # we evaluate the discrete time derivative of the encoder and match it locally
+        # to the mathematical vector field.
+        dt = 3.0 / z_encoded.shape[0] # Time delta per frame
+        dz_data = (z_encoded[1:, :, :] - z_encoded[:-1, :, :]) / dt
         
-        # Guide Item: Latent Covariance (Isotropy) Loss -- optional but reinforces circular spread
-        B_size = z_bt.shape[0]
+        # We need the vector field at exactly the encoded points
+        # t is a dummy variable since the ODE is autonomous
+        self.ode_func.current_omega = out["omega"]
+        
+        # Evaluate vector field over entire sequence directly (shapes rely on broadcasting)
+        z_eval = z_encoded[:-1, :, :]  # (T-1, B, 2)
+        dz_hopf = self.ode_func(None, z_eval)  # Returns (T-1, B, 2)
+        
+        self.ode_func.current_omega = None
+        
+        L_ode = torch.mean((dz_data - dz_hopf) ** 2)
+
+        # Guide Item: Latent Covariance (Isotropy) Loss -- forcefully ensures circular spread
         z_flat = z_bt.reshape(-1, self.latent_dim)
         z_flat_centered = z_flat - z_flat.mean(dim=0)
         cov = (z_flat_centered.T @ z_flat_centered) / (z_flat.shape[0] - 1)
         I = torch.eye(self.latent_dim, device=z_flat.device)
-        # Enforce that the latent space variance is spread as a unit circle 
-        # (the determinant of a circle is identity scaled by radius^2. Since radius ~ 1, cov ~ 0.5*I)
         L_iso = torch.mean((cov - 0.5 * I) ** 2)
 
         L_total = (L_data
                    + lambda_phi * L_phi
                    + lambda_smooth * L_smooth
                    + lambda_radius * L_radius
-                   + 10.0 * L_traj  # Rollout structural alignment
-                   + 1.0 * L_iso)   # Geometric decorrelation
+                   + 1.0 * L_ode  # Substituted traj rollout for local derivative match
+                   + 1.0 * L_iso) # Geometric decorrelation keeps it a perfect circle
 
         return {
             "total": L_total,
@@ -317,22 +296,36 @@ class GaitPINN(nn.Module):
             "phi": L_phi,
             "smooth": L_smooth,
             "radius": L_radius,
-            "ode": L_traj, # Renamed internally but keeping dict key 'ode' to avoid breakages in pinn_trainer
+            "ode": L_ode,
+            "iso": L_iso,
         }
 
     def compute_anomaly_scores(self, x: torch.Tensor) -> dict:
         with torch.no_grad():
             out = self.forward(x)
             z_encoded = out["z_encoded"]
-            z_traj_ode = out["z_traj_ode"]
             T_len, B, D = z_encoded.shape
 
             z_bt = z_encoded.permute(1, 0, 2)
-            z_bt_ode = z_traj_ode.permute(1, 0, 2)
 
             # True Structural Residual: Mathematical divergence between data and Physics prior
-            # Uses the dynamic ODE rollout instead of localized derivative matching
-            residual = torch.norm(z_bt_ode - z_bt, dim=-1)
+            # Evaluated locally via Vector Field alignment (handles biological jitter)
+            dt = 3.0 / T_len
+            dz_data = (z_bt[:, 1:, :] - z_bt[:, :-1, :]) / dt
+            
+            # Predict the ideal vector field at current encoded points
+            self.ode_func.current_omega = out["omega"]
+            
+            # Evaluate on (T, B, D) shape to cleanly broadcast omega (B,)
+            z_eval = z_encoded[:-1, :, :]
+            dz_hopf_tb = self.ode_func(None, z_eval)
+            self.ode_func.current_omega = None
+            
+            dz_hopf_bt = dz_hopf_tb.permute(1, 0, 2) # Back to (B, T-1, D)
+            
+            # Error magnitude per timestep (padded with 0 at start to maintain seq length)
+            raw_residual = torch.norm(dz_data - dz_hopf_bt, dim=-1)
+            residual = torch.cat([torch.zeros(B, 1, device=x.device), raw_residual], dim=1)
             residual_mean = residual.mean(dim=-1)
             
             # Phase: departure from expected angular advance

@@ -176,11 +176,8 @@ def plot_limit_cycle_portrait(fold=1, n_samples=30):
         with torch.no_grad():
             out = model.forward(w)
             z = out["z_encoded"][:, 0, :].cpu().numpy()
-            z_ode = out["z_traj_ode"][:, 0, :].cpu().numpy()
             
         ax.plot(z[:, 0], z[:, 1], alpha=0.5, linewidth=1.5, color="#3498DB")
-        # Overlay the perfect ODE rollout in faint grey
-        ax.plot(z_ode[:, 0], z_ode[:, 1], '--', alpha=0.4, linewidth=0.8, color="gray")
         
         ax.scatter(z[0, 0], z[0, 1], s=8, color="#2ECC71", zorder=5)
 
@@ -210,9 +207,7 @@ def plot_limit_cycle_portrait(fold=1, n_samples=30):
             with torch.no_grad():
                 out = model.forward(w)
                 z = out["z_encoded"][:, 0, :].cpu().numpy()
-                z_ode = out["z_traj_ode"][:, 0, :].cpu().numpy()
             ax.plot(z[:, 0], z[:, 1], alpha=0.5, linewidth=1.5, color="#E74C3C")
-            ax.plot(z_ode[:, 0], z_ode[:, 1], '--', alpha=0.4, linewidth=0.8, color="gray")
             
             ax.scatter(z[0, 0], z[0, 1], s=8, color="#2ECC71", zorder=5)
 
