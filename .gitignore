@@ -6,7 +6,6 @@ venv/
 .env
 
 # Project specific
-results/
 checkpoints/
 logs/
 data/raw/
