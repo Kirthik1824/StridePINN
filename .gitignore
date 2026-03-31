@@ -1,22 +1,22 @@
-# Data (download via data/download_daphnet.py, preprocess via data/preprocess.py)
-data/raw/
-data/processed/
-
-# Training outputs
-checkpoints/
-results/
-
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-.eggs/
+*.py[cod]
+*$py.class
+venv/
+.env
 
-# IDE
+# Project specific
+results/
+checkpoints/
+logs/
+*.pt
+*.json
+*.png
+*.txt
+*.sh
+
+# Artifacts/Misc
+.ipynb_checkpoints
 .vscode/
 .idea/
-
-# OS
 .DS_Store
-Thumbs.db
