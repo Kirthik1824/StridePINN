@@ -9,11 +9,20 @@ venv/
 results/
 checkpoints/
 logs/
+data/raw/
+data/processed/
 *.pt
 *.json
 *.png
 *.txt
 *.sh
+*.zip
+*.pdf
+*.m
+*.html
+*.jpg
+*.jpeg
+*.bak
 
 # Artifacts/Misc
 .ipynb_checkpoints
