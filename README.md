@@ -1,89 +1,43 @@
-# StridePINN: Multi-Paradigm FoG Detection with Physics-Informed Neural ODEs
+# StridePINN: Physics-Augmented Freezing of Gait Detection
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/get-started/locally/)
+This repository implements three physics-informed approaches for detecting Freezing of Gait (FoG) using wearable sensor data (Daphnet dataset). By modeling normal human gait as a stable limit-cycle oscillator, FoG episodes can be detected as chaotic breakdowns of this cycle.
 
-StridePINN is a research framework for detecting **Freezing of Gait (FoG)** in Parkinson's Disease patients using wearable inertial sensors. It implements a **three-tier comparative framework**, evaluating FoG detection across supervised classification, unsupervised anomaly detection, and a novel **Physics-Informed Neural Network (PINN)** paradigm.
+## Three Approaches
 
-## 🚀 Key Features
+We explore three distinct paths to integrating physics into FoG detection. Each approach is developed in its own isolated branch from `main`:
 
-- **Multi-Paradigm Evaluation**: Comparative analysis across three detection philosophies:
-  - **Supervised**: High-capacity deep learning (CNN, CNN-LSTM).
-  - **Unsupervised Anomaly**: Reconstruction-based detection (Conv Autoencoder, One-Class SVM).
-  - **Physics-Informed**: Dynamics-based detection via latent Neural ODEs.
-- **Physics-Informed Latent Dynamics**: Learns gait as a 2D Neural ODE system governed by limit-cycle biomechanical constraints.
-- **Neural ODEs**: Continuous-time dynamics modeling using `torchdiffeq` with Adjoint Sensitivity Method.
-- **Interpretability**: PINN flags FoG via clinically relevant biomarkers:
-  - **Dynamics Residual $r(t)$**: Spikes when the trajectory departs from the learned "law of walking."
-  - **Phase Stagnation $\Delta\Phi$**: Plateaus when the gait rhythm collapses.
-  - **Continuous Analysis**: New interpretability suite overlays dynamics on ground-truth FoG timelines.
-- **Label-Free PINN Training**: The PINN and anomaly baselines require **no FoG annotations** for training—learning exclusively from normal gait data.
+### Approach 1: Signal-Space Physics Features (Branch: `approach-1/physics-features`)
+Extracts interpretable, deterministic physics biomarkers from each window, including:
+- **Freeze Index (FoGI):** Ratio of PSD power in 3–8 Hz (tremor) vs 0.5–3 Hz (locomotion)
+- **Delay Embedding (Limit Cycle):** Radius variance and phase advance over the delay-embedded orbit
+- **Cadence & Energy:** Auto-correlation step regularity
+- *Classification:* Support Vector Machine (SVM) and Logistic Regression over a 10-fold LOSO scheme.
 
-## 📊 Methodology: Three Pillars of Detection
+### Approach 2: Physics-Augmented Deep Sequence Model (Branch: `approach-2/hybrid-deep-model`)
+Fuses deep learning with physical priors:
+- **CNN-LSTM + Physics Fusion:** An existing CNN-LSTM backbone concatenated with the engineered physics features (FoGI, radius, etc.) before the final classifier.
+- **GRU-PINN:** An autoencoder (unsupervised representation learning) that maps 9D IMU data to a 2D latent space. Regularized with physics-informed losses: cycle closure ($z_T \approx z_0$), temporal smoothness, and (optional) Hopf ODE normal form dynamics.
 
-| Paradigm | Models | Labels Required | Key Differentiator |
-|:---|:---|:---|:---|
-| **Supervised** | 1D-CNN, CNN-LSTM | Normal + FoG | Performance Ceiling |
-| **Deep Anomaly** | Conv Autoencoder | Normal Only | Reconstruction Error |
-| **Physics Anomaly** | **StridePINN** | **Normal Only** | **Dynamical Interpretability** |
+### Approach 3: Dynamical Mode Decomposition (Branch: `approach-3/dmd-analysis`)
+A training-free dynamical systems approach:
+- **DMD Triple Index:** Evaluates how well a window fits a few sinusoidal modes (via Hankel matrix SVD).
+- **Reconstruction Error:** A measure of periodicity loss during FoG.
+- *Classification:* Logistic regression on extracted DMD features.
 
-StridePINN focuses on the **Physics Anomaly** pillar, modeling gait as an orbitally stable limit cycle. FoG is treated as a dynamical collapse—a loss of oscillator stability that can be detected without ever seeing a labeled "freeze" during training.
+## Data & Preprocessing
+- Dataset: Daphnet Freezing of Gait dataset (10 subjects, wearable accelerometers).
+- Pipeline: Available in `data/preprocess.py` (downsampling to 40 Hz, band-pass filtering, 128-sample sliding window).
 
-## 🛠️ Installation
-
+## Environment Setup
 ```bash
-# Clone the repository
-git clone https://github.com/Kirthik1824/StridePINN.git
-cd StridePINN
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-## 📂 Project Structure
+*(Note: Approach 3 Optionally uses PyDMD if installed, but falls back to exact SVD implementations).*
 
+## Evaluating the Approaches
+To test any approach, check out its branch:
+```bash
+git checkout <branch_name>
 ```
-StridePINN/
-├── config.py              # Global hyperparameters and configuration
-├── train.py               # Unified entry point for all models
-├── evaluate.py            # Aggregate 5-model benchmark
-├── utils.py               # Shared utility functions
-├── data/
-│   ├── preprocess.py      # 7-step signal processing pipeline
-│   ├── dataset.py         # PyTorch Dataset and LOSO split logic
-│   └── download_daphnet.py # Script to fetch raw data
-├── models/
-│   ├── cnn.py             # 1D-CNN Supervised (~146k params)
-│   ├── cnn_lstm.py        # CNN-LSTM Supervised (~79k params)
-│   ├── conv_ae.py         # Conv Autoencoder Anomaly (~45k params)
-│   └── pinn.py            # StridePINN Physics-Informed (~5k params)
-├── training/
-│   ├── supervised_trainer.py # Training logic for CNN/LSTM
-│   ├── anomaly_trainer.py    # Training logic for ConvAE/OCSVM
-│   ├── pinn_trainer.py       # Training logic for StridePINN
-│   └── trainer_utils.py      # Data preparation and logging utils
-├── visualization/
-│   ├── visualize.py       # Latent phase-plane and residual plots
-│   └── interpretability.py # Subject-level interpretability traces
-└── scripts/
-    └── run_ablations.py   # Automated physics loss ablation suite
-```
-
-## 📈 Results (Aggregate LOSO Metrics)
-
-| Model | Paradigm | AUC | Se | Sp | F1 |
-|:---|:---|:---|:---|:---|:---|
-| CNN-LSTM | Supervised | **0.958** | 0.813 | 0.822 | 0.542 |
-| Conv AE | Deep Anomaly | 0.845 | 0.528 | 0.822 | 0.280 |
-| **PINN** | **Physics** | 0.552 | 0.449 | 0.774 | 0.222 |
-
-*\* PINN aggregate results show high inter-subject variance; peak performance on Fold 1 reaches **0.813 AUC**.*
-
----
-
-## 🔗 References
-
-- Chen et al., 2018. *"Neural Ordinary Differential Equations"* (NeurIPS)
-- Raissi et al., 2019. *"Physics-informed neural networks"* (J. Comput. Phys.)
-- Bachlin et al., 2009. *"Daphnet Freezing of Gait Dataset"* (UCI)
-- Sigcha et al., 2024. *"Deep learning for FoG detection: a cross-dataset study"* (ESWA)
+Follow the specific scripts contained within each branch (`classify_physics.py` for Approach 1, `train_approach2.py` for Approach 2, `evaluate_dmd.py` for Approach 3).
