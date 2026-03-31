@@ -5,23 +5,14 @@ __pycache__/
 venv/
 .env
 
-# Project specific
-checkpoints/
-logs/
+# Data (large, not tracked)
 data/raw/
 data/processed/
+
+# Outputs (generated per-run)
+results/
+checkpoints/
 *.pt
-*.json
-*.png
-*.txt
-*.sh
-*.zip
-*.pdf
-*.m
-*.html
-*.jpg
-*.jpeg
-*.bak
 
 # Artifacts/Misc
 .ipynb_checkpoints

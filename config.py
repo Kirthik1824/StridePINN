@@ -3,6 +3,10 @@ config.py — Central configuration for StridePINN.
 
 All hyperparameters, paths, and preprocessing constants live here
 so that every script imports a single source of truth.
+
+Two research approaches:
+  1. Early Warning Prediction (CNN-LSTM + EWS features)
+  2. Interpretable Rule-Based Detection (physics thresholds)
 """
 
 from dataclasses import dataclass, field
@@ -58,22 +62,13 @@ class Config:
     normal_label_threshold: float = 0.1  # <10 % FoG → label 0
 
     # ----------------------------------------------------------------
-    #  Data Augmentation (supervised baselines)
+    #  Data Augmentation
     # ----------------------------------------------------------------
     fog_oversample_factor: int = 3
     jitter_samples: int = 4         # ±0.1 s at 40 Hz
 
     # ----------------------------------------------------------------
-    #  Model — 1D-CNN
-    # ----------------------------------------------------------------
-    cnn_conv1_out: int = 32
-    cnn_conv2_out: int = 32
-    cnn_kernel_size: int = 8
-    cnn_fc_sizes: Tuple[int, ...] = (1024, 128, 32)
-    cnn_dropout: float = 0.3
-
-    # ----------------------------------------------------------------
-    #  Model — CNN-LSTM
+    #  Model — CNN-LSTM Prediction (Approach 1)
     # ----------------------------------------------------------------
     lstm_conv1_out: int = 128
     lstm_conv2_out: int = 64
@@ -83,40 +78,33 @@ class Config:
     lstm_dropout: float = 0.3
 
     # ----------------------------------------------------------------
-    #  Model — PINN
+    #  Prediction Horizons (Approach 1)
     # ----------------------------------------------------------------
-    latent_dim: int = 2
-    encoder_hidden: int = 128        # Increased from 64
-    ode_hidden: int = 64            # Increased from 32
-    decoder_out: int = 9            # reconstruct ALL accel channels
+    # Predict FoG k seconds into the future
+    prediction_horizons: Tuple[float, ...] = (1.0, 2.0, 3.0)  # seconds
+    default_prediction_horizon: float = 2.0  # seconds
 
-    # Physics loss weights
-    lambda_cyc: float = 0.0         # Disabled because 3s window @ 1.5Hz = 4.5 cycles (z_end opposes z_start)
-    lambda_phi: float = 10.0
-    lambda_smooth: float = 0.1
-    lambda_radius: float = 10.0     # Massively upweighted to prevent r=0 collapse
+    # Early Warning Signal sliding sub-window
+    ews_sub_window: int = 32        # samples (0.8 s) for trend computation
 
-    # PINN Warmup
-    pinn_warmup_epochs: int = 10    # Epochs with data loss only
-    pinn_scheduler_steps: int = 10  # Epochs to ramp up physics losses
-
-    # ODE solver
-    ode_method: str = "rk4"         # Switched from dopri5 for speed
-    ode_mode: str = "hopf"          # Hopf normal form ODE (default)
-    ode_rtol: float = 1e-3
-    ode_atol: float = 1e-4
-    ode_step_size: float = 0.1      # Fixed step size for solvers like rk4
+    # ----------------------------------------------------------------
+    #  Rule-Based Detector (Approach 2)
+    # ----------------------------------------------------------------
+    rule_fogi_threshold: float = 1.5
+    rule_radius_threshold: float = 0.3    # below this = collapsed
+    rule_phase_var_threshold: float = 1.0  # above this = unstable
+    rule_scoring_weights: Tuple[float, ...] = (0.5, 0.3, 0.2)  # FoGI, radius, phase
 
     # ----------------------------------------------------------------
     #  Training
     # ----------------------------------------------------------------
-    batch_size: int = 1024          # Increased from 128 to saturate GPU
-    num_epochs: int = 100           # Increased to accommodate reversed curriculum
+    batch_size: int = 1024
+    num_epochs: int = 100
     learning_rate: float = 1e-3
     weight_decay: float = 1e-5
     cosine_t_max: int = 100
     grad_clip_norm: float = 1.0
-    early_stop_patience: int = 15   # Tighter patience
+    early_stop_patience: int = 15
 
     # ----------------------------------------------------------------
     #  Reproducibility
