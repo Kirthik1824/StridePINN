@@ -45,8 +45,13 @@ class FoGCNNLSTMPrediction(nn.Module):
         phys_embed_dim: int = 16,
         ews_embed_dim: int = 16,
         dropout: float = 0.3,
+        use_physics: bool = True,
+        use_ews: bool = True,
     ):
         super().__init__()
+        
+        self.use_physics = use_physics
+        self.use_ews = use_ews
 
         # ----- CNN backbone -----
         self.conv1 = nn.Sequential(
@@ -120,12 +125,18 @@ class FoGCNNLSTMPrediction(nn.Module):
         lstm_out = self.lstm_dropout(h_n[-1])  # (B, 64)
 
         # Physics branch
-        phys_out = self.phys_bn(phys)
-        phys_out = self.phys_embed(phys_out)  # (B, phys_embed_dim)
+        if self.use_physics:
+            phys_out = self.phys_bn(phys)
+            phys_out = self.phys_embed(phys_out)  # (B, phys_embed_dim)
+        else:
+            phys_out = torch.zeros(x.size(0), self.phys_embed[0].out_features, device=x.device)
 
         # EWS branch
-        ews_out = self.ews_bn(ews)
-        ews_out = self.ews_embed(ews_out)  # (B, ews_embed_dim)
+        if self.use_ews:
+            ews_out = self.ews_bn(ews)
+            ews_out = self.ews_embed(ews_out)  # (B, ews_embed_dim)
+        else:
+            ews_out = torch.zeros(x.size(0), self.ews_embed[0].out_features, device=x.device)
 
         # Fusion
         fused = torch.cat([lstm_out, phys_out, ews_out], dim=1)

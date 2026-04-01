@@ -25,7 +25,7 @@ from training.trainer_utils import prepare_fold_data
 from models.cnn_lstm_prediction import FoGCNNLSTMPrediction
 from features import extract_features_batch, get_feature_names
 from features_ews import extract_ews_features_batch, get_ews_feature_names
-from utils import compute_metrics, find_optimal_threshold, compute_detection_latency
+from utils import compute_metrics, find_optimal_threshold, compute_lead_time
 
 
 def create_prediction_labels(
@@ -56,7 +56,6 @@ def create_prediction_labels(
 
     return pred_labels
 
-
 def _extract_physics_features(windows_np: np.ndarray) -> torch.Tensor:
     """Extract physics features and return as tensor."""
     feats = extract_features_batch(windows_np, fs=cfg.target_fs, tau=5, channel=0)
@@ -72,6 +71,15 @@ def _extract_ews_features(windows_np: np.ndarray) -> torch.Tensor:
     )
     feats = np.nan_to_num(feats, nan=0.0, posinf=1e6, neginf=-1e6)
     return torch.tensor(feats, dtype=torch.float32)
+
+
+def get_cached_features(dataset: GaitDataset, logger=None):
+    if not hasattr(dataset, "phys_features"):
+        if logger: logger.info("  [Cache] Computing physics features for entire dataset...")
+        dataset.phys_features = _extract_physics_features(dataset.windows.numpy())
+        if logger: logger.info("  [Cache] Computing EWS features for entire dataset...")
+        dataset.ews_features = _extract_ews_features(dataset.windows.numpy())
+    return dataset.phys_features, dataset.ews_features
 
 
 def train_prediction_fold(
@@ -119,17 +127,16 @@ def train_prediction_fold(
         create_prediction_labels(test_l.numpy(), horizon_windows), dtype=torch.long
     )
 
-    # Extract features
-    if logger:
-        logger.info(f"Fold {fold}: extracting physics + EWS features...")
+    # Extract features (cached globally on dataset)
+    all_phys, all_ews = get_cached_features(dataset, logger)
+    
+    train_phys = all_phys[fold_info["train_idx"]]
+    val_phys = all_phys[fold_info["val_idx"]]
+    test_phys = all_phys[fold_info["test_idx"]]
 
-    train_phys = _extract_physics_features(train_w.numpy())
-    val_phys = _extract_physics_features(val_w.numpy())
-    test_phys = _extract_physics_features(test_w.numpy())
-
-    train_ews = _extract_ews_features(train_w.numpy())
-    val_ews = _extract_ews_features(val_w.numpy())
-    test_ews = _extract_ews_features(test_w.numpy())
+    train_ews = all_ews[fold_info["train_idx"]]
+    val_ews = all_ews[fold_info["val_idx"]]
+    test_ews = all_ews[fold_info["test_idx"]]
 
     # Augmentation
     train_w_aug, train_a_aug, train_pred_l_aug = augment_fog_windows(
@@ -177,6 +184,8 @@ def train_prediction_fold(
         num_phys_features=num_phys,
         num_ews_features=num_ews,
         dropout=cfg.lstm_dropout,
+        use_physics=getattr(args, "use_physics", True),
+        use_ews=getattr(args, "use_ews", True),
     ).to(device)
 
     criterion = nn.BCEWithLogitsLoss()
@@ -185,6 +194,7 @@ def train_prediction_fold(
 
     # --- Training loop ---
     best_val_auc = 0.0
+    best_val_loss = float("inf")
     best_state = None
     patience_counter = 0
 
@@ -212,20 +222,41 @@ def train_prediction_fold(
         model.eval()
         val_probs = []
         val_labels_list = []
+        val_loss = 0.0
+        n_val_batches = 0
 
         with torch.no_grad():
             for batch in val_loader:
                 windows, phys, ews, labels = [b.to(device) for b in batch]
-                probs = torch.sigmoid(model(windows, phys, ews)).squeeze(-1)
+                logits = model(windows, phys, ews)
+                probs = torch.sigmoid(logits).squeeze(-1)
+                
+                loss = criterion(logits.squeeze(-1), labels.float())
+                val_loss += loss.item()
+                n_val_batches += 1
+                
                 val_probs.append(probs.cpu().numpy())
                 val_labels_list.append(labels.cpu().numpy())
 
         val_probs = np.concatenate(val_probs)
         val_labels_arr = np.concatenate(val_labels_list)
         val_metrics = compute_metrics(val_labels_arr, val_probs)
+        val_loss /= max(n_val_batches, 1)
 
-        if val_metrics["auc"] > best_val_auc:
-            best_val_auc = val_metrics["auc"]
+        # For zero-FoG validation folds, AUC is NaN. Fallback to loss.
+        is_val_auc_nan = np.isnan(val_metrics["auc"])
+        
+        improved = False
+        if not is_val_auc_nan:
+            if val_metrics["auc"] > best_val_auc:
+                best_val_auc = val_metrics["auc"]
+                improved = True
+        else:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                improved = True
+
+        if improved:
             best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
             patience_counter = 0
         else:
@@ -269,9 +300,12 @@ def train_prediction_fold(
     test_metrics = compute_metrics(test_labels_arr, test_probs, threshold=threshold)
 
     y_pred = (test_probs >= threshold).astype(int)
-    latency = compute_detection_latency(
-        test_labels_arr, y_pred,
+    
+    # Lead time computed against the ORIGINAL labels, not the shifted ones
+    latency = compute_lead_time(
+        test_l.numpy(), y_pred,
         window_stride_sec=window_stride_sec,
+        horizon_windows=horizon_windows,
     )
 
     if logger:

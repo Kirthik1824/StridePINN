@@ -124,21 +124,23 @@ def find_optimal_threshold(y_true: np.ndarray, y_prob: np.ndarray) -> float:
     return float(thresholds[best_idx])
 
 
-def compute_detection_latency(
+def compute_lead_time(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     window_stride_sec: float = 0.8,
+    horizon_windows: int = 4,
 ) -> dict:
     """
-    Compute detection latency for true-positive FoG episodes.
-
+    Compute prediction lead time before FoG onsets.
+    
     A FoG episode is a contiguous run of y_true==1 windows.
-    Latency = number of windows from episode start to first correct
-    detection × window_stride_sec.
+    For each episode, we look at the pre-onset zone: [onset - horizon_windows, onset].
+    Lead time = number of windows from the *first* prediction in this zone to the onset.
+    If no prediction occurs before onset, lead time is 0.
 
-    Returns dict with median, q25, q75, and list of latencies.
+    Returns dict with median, mean, q25, q75, and list of lead times.
     """
-    latencies = []
+    lead_times = []
     in_episode = False
     episode_start = None
 
@@ -146,22 +148,30 @@ def compute_detection_latency(
         if y_true[i] == 1 and not in_episode:
             in_episode = True
             episode_start = i
+            
+            # Find earliest prediction in the horizon prior to onset
+            search_start = max(0, episode_start - horizon_windows)
+            pred_indices = np.where(y_pred[search_start:episode_start+1] == 1)[0]
+            
+            if len(pred_indices) > 0:
+                first_pred_idx = search_start + pred_indices[0]
+                lead_time = (episode_start - first_pred_idx) * window_stride_sec
+                lead_times.append(lead_time)
+            else:
+                lead_times.append(0.0)
+                
         elif y_true[i] == 0 and in_episode:
             in_episode = False
-
-        if in_episode and y_pred[i] == 1 and episode_start is not None:
-            latency = (i - episode_start) * window_stride_sec
-            latencies.append(latency)
-            in_episode = False  # count only first detection per episode
             episode_start = None
 
-    if len(latencies) == 0:
-        return {"median": float("nan"), "q25": float("nan"), "q75": float("nan"), "all": []}
+    if len(lead_times) == 0:
+        return {"median": float("nan"), "mean": float("nan"), "q25": float("nan"), "q75": float("nan"), "all": []}
 
-    arr = np.array(latencies)
+    arr = np.array(lead_times)
     return {
         "median": float(np.median(arr)),
+        "mean": float(np.mean(arr)),
         "q25": float(np.percentile(arr, 25)),
         "q75": float(np.percentile(arr, 75)),
-        "all": latencies,
+        "all": lead_times,
     }

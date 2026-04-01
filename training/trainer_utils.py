@@ -15,7 +15,7 @@ from utils import (
     setup_logger,
     compute_metrics,
     find_optimal_threshold,
-    compute_detection_latency,
+    compute_lead_time,
 )
 
 def prepare_fold_data(dataset, fold_info, device, normal_only=False):

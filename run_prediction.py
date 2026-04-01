@@ -63,7 +63,19 @@ def run_single_horizon(args, dataset, device, logger, horizon):
     print(f"{'='*60}")
     for key in metrics_keys:
         vals = [r["test_metrics"][key] for r in all_results]
-        print(f"  {key:15s}: {np.mean(vals):.3f} ± {np.std(vals):.3f}")
+        valid = [v for v in vals if not np.isnan(v)]
+        if valid:
+            print(f"  {key:15s}: {np.mean(valid):.3f} ± {np.std(valid):.3f} (n={len(valid)})")
+        else:
+            print(f"  {key:15s}: N/A")
+            
+    lat_vals = [
+        r["latency"]["median"] for r in all_results
+        if r.get("latency") and not np.isnan(r["latency"]["median"])
+    ]
+    if lat_vals:
+        print(f"  {'lead time (s)':15s}: {np.mean(lat_vals):.2f} ± {np.std(lat_vals):.2f} (n={len(lat_vals)})")
+        
     print(f"{'='*60}\n")
 
     # Save results
