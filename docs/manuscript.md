@@ -1,6 +1,3 @@
-> [!NOTE]
-> **Version Control**: This version is pivoted toward **Enhancing Performance** for FYP submission and viva voce. The alternative "Predictability Limits" narrative is recommendation for high-tier journal submissions (e.g., IEEE TNSRE) to justify the 1.6s empirical cap in a generalized (LOSO) setting.
-
 # Physics-Informed Gait Modeling for Parkinson's Disease: Enhancing Early Warning of Freezing of Gait via Feature Fusion
 
 ## Abstract
