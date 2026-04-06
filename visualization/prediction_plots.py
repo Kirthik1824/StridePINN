@@ -21,8 +21,14 @@ from scipy.signal import butter, filtfilt
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import cfg
 from data.dataset import GaitDataset
-from data.signal_physics import compute_fogi, compute_delay_embedding, compute_limit_cycle_features
-from features import compute_fogi as compute_fogi_feat
+from features import compute_fogi
+
+
+def _delay_embed(signal, tau=5):
+    """Inline Takens delay embedding for visualization."""
+    x = signal[:-tau]
+    y = signal[tau:]
+    return x, y
 
 
 COLORS = {
@@ -79,7 +85,7 @@ def plot_phase_portraits(dataset: GaitDataset = None, subject_id: int = 1):
         except ValueError:
             sig_filt = sig
 
-        x, y = compute_delay_embedding(sig_filt, tau)
+        x, y = _delay_embed(sig_filt, tau)
         ax.plot(x, y, color=color, linewidth=1.5, alpha=0.8)
         ax.scatter(x[0], y[0], marker="o", color="green", s=50, zorder=5, label="Start")
         ax.set_title(title, fontsize=11)
@@ -111,7 +117,7 @@ def plot_fogi_trajectory(dataset: GaitDataset = None, subject_id: int = 1):
     # Compute FoGI for each window
     fogis = []
     for i in range(len(windows)):
-        fogi = compute_fogi_feat(windows[i][:, 0], fs=cfg.target_fs)
+        fogi = compute_fogi(windows[i][:, 0], fs=cfg.target_fs)
         fogis.append(fogi)
     fogis = np.array(fogis)
 
@@ -175,7 +181,7 @@ def plot_radius_collapse(dataset: GaitDataset = None, subject_id: int = 1):
             sig_filt = sig
 
         if len(sig_filt) > tau:
-            x, y = compute_delay_embedding(sig_filt, tau)
+            x, y = _delay_embed(sig_filt, tau)
             r = np.sqrt(x**2 + y**2)
             radii.append(np.mean(r))
         else:

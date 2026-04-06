@@ -29,9 +29,11 @@ def parse_args():
     p.add_argument("--batch_size", type=int, default=cfg.batch_size)
     p.add_argument("--lr", type=float, default=cfg.learning_rate)
     p.add_argument("--seed", type=int, default=cfg.seed)
+    p.add_argument("--m", type=int, default=2, help="Embedding dimension constraint")
+    p.add_argument("--variant", type=str, default="all", help="Specific variant name to run")
     return p.parse_args()
 
-def run_variant(args, dataset, device, logger, name, use_physics, use_ews):
+def run_variant(args, dataset, device, logger, name, use_physics, use_ews, baseline_type=None):
     args.use_physics = use_physics
     args.use_ews = use_ews
     
@@ -43,14 +45,23 @@ def run_variant(args, dataset, device, logger, name, use_physics, use_ews):
     for i, fold_info in enumerate(get_loso_splits(dataset)):
         if i >= args.folds:
             break
-        res = train_prediction_fold(fold_info, dataset, args, device, logger)
+            
+        if baseline_type == "fogi":
+            from training.baseline_trainer import train_fogi_baseline_fold
+            res = train_fogi_baseline_fold(fold_info, dataset, args, device, logger)
+        elif baseline_type == "svm":
+            from training.baseline_trainer import train_svm_baseline_fold
+            res = train_svm_baseline_fold(fold_info, dataset, args, device, logger)
+        else:
+            res = train_prediction_fold(fold_info, dataset, args, device, logger)
+            
         all_results.append(res)
         
     metrics_keys = ["auc", "f1", "sensitivity", "specificity"]
     summary = {}
     
     print(f"\n{'='*60}")
-    print(f"  {name} — {len(all_results)}-fold LOSO")
+    print(f"  {name} — {len(all_results)}-fold LOSO (Overall Summary)")
     print(f"{'='*60}")
     
     for key in metrics_keys:
@@ -74,6 +85,19 @@ def run_variant(args, dataset, device, logger, name, use_physics, use_ews):
         summary["lead_time_mean"] = None
         summary["lead_time_std"] = None
         
+    print(f"\n  Per-Subject Breakdown:")
+    print(f"  {'Subject':10s} | {'AUC':6s} | {'Sensitivity':11s} | {'Lead Time (s)':13s}")
+    print(f"  {'-'*10}-+-{'-'*6}-+-{'-'*11}-+-{'-'*13}-")
+    for r in all_results:
+        subj = r["test_subject"]
+        auc = r["test_metrics"].get("auc", float("nan"))
+        sens = r["test_metrics"].get("sensitivity", float("nan"))
+        lead = r["latency"]["median"] if r.get("latency") else float("nan")
+        auc_str = f"{auc:.3f}" if not np.isnan(auc) else "N/A"
+        sens_str = f"{sens:.3f}" if not np.isnan(sens) else "N/A"
+        lead_str = f"{lead:.2f}" if not np.isnan(lead) else "N/A"
+        print(f"  {str(subj):10s} | {auc_str:6s} | {sens_str:11s} | {lead_str:13s}")
+        
     print(f"{'='*60}\n")
     return summary, all_results
 
@@ -81,32 +105,41 @@ def main():
     args = parse_args()
     seed_everything(args.seed)
     device = get_device()
+    cfg.delay_embedding_m = args.m
 
     log_dir = cfg.results_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     logger = setup_logger(
         "ablation",
-        log_file=log_dir / "run_ablation.log",
+        log_file=log_dir / f"run_ablation_h{args.horizon}_m{args.m}.log",
     )
 
     dataset = GaitDataset()
     
     variants = [
-        {"name": "Base (CNN-LSTM)", "use_physics": False, "use_ews": False},
-        {"name": "Base + Physics", "use_physics": True, "use_ews": False},
-        {"name": "Base + EWS", "use_physics": False, "use_ews": True},
-        {"name": "Full Model", "use_physics": True, "use_ews": True},
+        {"name": "Baseline: Freezing Index", "use_physics": False, "use_ews": False, "baseline_type": "fogi"},
+        {"name": "Baseline: SVM (Physics+EWS)", "use_physics": False, "use_ews": False, "baseline_type": "svm"},
+        {"name": "Base (CNN-LSTM)", "use_physics": False, "use_ews": False, "baseline_type": None},
+        {"name": "Base + Physics", "use_physics": True, "use_ews": False, "baseline_type": None},
+        {"name": "Base + EWS", "use_physics": False, "use_ews": True, "baseline_type": None},
+        {"name": "Full Model", "use_physics": True, "use_ews": True, "baseline_type": None},
     ]
+
+    if args.variant != "all":
+        variants = [v for v in variants if v["name"] == args.variant]
+        if not variants:
+            print(f"Variant '{args.variant}' not found!")
+            return
     
     results = {}
     
     for v in variants:
         summary, fold_results = run_variant(
-            args, dataset, device, logger, v["name"], v["use_physics"], v["use_ews"]
+            args, dataset, device, logger, v["name"], v["use_physics"], v["use_ews"], v["baseline_type"]
         )
         results[v["name"]] = {"summary": summary, "folds": fold_results}
         
-    results_path = cfg.results_dir / "ablation_results.json"
+    results_path = cfg.results_dir / f"sweep_results_h{args.horizon}_m{args.m}_{args.variant.replace(' ', '_').replace('+','_')}.json"
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2, default=str)
         

@@ -16,6 +16,11 @@ import numpy as np
 from scipy.signal import welch, butter, filtfilt
 from typing import Dict, List
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from config import cfg
+
 
 def compute_radius_variance_trend(
     signal: np.ndarray, tau: int = 5, sub_window: int = 32
@@ -26,13 +31,13 @@ def compute_radius_variance_trend(
     Increasing variance = approaching collapse.
     Returns: slope of radius variance across sub-windows.
     """
-    if len(signal) < tau + sub_window:
+    m = cfg.delay_embedding_m
+    if len(signal) < (m-1)*tau + sub_window:
         return 0.0
 
     # Delay embedding
-    x = signal[:-tau]
-    y = signal[tau:]
-    r = np.sqrt(x**2 + y**2)
+    embedded = np.array([signal[i*tau : len(signal) - (m-1-i)*tau] for i in range(m)])
+    r = np.linalg.norm(embedded, axis=0)
 
     # Compute variance in sliding sub-windows
     n_subs = max(1, (len(r) - sub_window) // (sub_window // 2) + 1)
@@ -53,7 +58,6 @@ def compute_radius_variance_trend(
     slope = np.polyfit(t, v, 1)[0]
     return float(slope)
 
-
 def compute_phase_velocity_drift(
     signal: np.ndarray, tau: int = 5, sub_window: int = 32
 ) -> float:
@@ -63,11 +67,12 @@ def compute_phase_velocity_drift(
     Stable gait = constant phase velocity; pre-FoG = increasing instability.
     Returns: std of mean phase velocity across sub-windows.
     """
-    if len(signal) < tau + sub_window:
+    m = cfg.delay_embedding_m
+    if len(signal) < (m-1)*tau + sub_window:
         return 0.0
 
-    x = signal[:-tau]
-    y = signal[tau:]
+    embedded = np.array([signal[i*tau : len(signal) - (m-1-i)*tau] for i in range(m)])
+    x, y = embedded[0], embedded[1]
     phi = np.unwrap(np.arctan2(y, x))
     dphi = np.diff(phi)
 

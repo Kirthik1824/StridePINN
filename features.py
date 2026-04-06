@@ -34,24 +34,34 @@ def compute_dominant_freq(signal: np.ndarray, fs: int = 40) -> float:
     return float(freqs[np.argmax(psd)])
 
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from config import cfg
+
 def compute_delay_embedding_features(
     signal: np.ndarray, tau: int = 5
 ) -> Dict[str, float]:
     """
-    Delay-embed x(t) vs x(t+τ), compute radius & phase statistics.
-
+    Delay-embed x(t) into m dimensions, compute radius & phase statistics.
     Normal gait → tight loop (low r_var, steady dphi).
     FoG → collapsed or chaotic (high r_var, erratic dphi).
     """
-    if len(signal) <= tau:
+    m = cfg.delay_embedding_m
+    if len(signal) <= (m-1)*tau:
         return {
             "r_mean": 0.0, "r_var": 0.0,
             "dphi_mean": 0.0, "dphi_std": 0.0,
         }
 
-    x = signal[:-tau]
-    y = signal[tau:]
-    r = np.sqrt(x**2 + y**2)
+    # M-dimensional delay embedding
+    embedded = np.array([signal[i*tau : len(signal) - (m-1-i)*tau] for i in range(m)])
+    
+    # Full m-dimensional radius
+    r = np.linalg.norm(embedded, axis=0)
+    
+    # 2D phase from the first two delay coordinates
+    x, y = embedded[0], embedded[1]
     phi = np.unwrap(np.arctan2(y, x))
     dphi = np.diff(phi)
 
@@ -61,7 +71,6 @@ def compute_delay_embedding_features(
         "dphi_mean": float(np.mean(dphi)),
         "dphi_std": float(np.std(dphi)),
     }
-
 
 def compute_signal_energy(signal: np.ndarray) -> float:
     """RMS energy of the window. Near-zero → standstill."""

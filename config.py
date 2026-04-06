@@ -87,6 +87,9 @@ class Config:
     # Early Warning Signal sliding sub-window
     ews_sub_window: int = 32        # samples (0.8 s) for trend computation
 
+    # Dynamical feature extraction
+    delay_embedding_m: int = 2
+
     # ----------------------------------------------------------------
     #  Rule-Based Detector (Approach 2)
     # ----------------------------------------------------------------
