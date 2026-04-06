@@ -46,7 +46,7 @@ We extracted variables quantifying the stability of the gait limit cycle:
 
 ### 3.3 Neural Architecture and Training
 We built a multi-stream fusion network:
-*   **CNN-LSTM Backbone:** Processes raw IMU data. CNN layer channels: 128 → 64 (kernel 4). LSTM hidden state: 64. Fully connected layer: 80 → 40 → 1.
+*   **CNN-LSTM Backbone:** Processes raw IMU data. CNN layer channels: 128 → 64 (kernel 4). LSTM hidden state: 64. Fully connected layer: 80 → 40 → 1. *Note: This architecture was selected following the failure of an initial Gated Recurrent Unit (GRU) based Physics-Informed Neural Network (PINN) that utilized rigid ODE constraints.*
 *   **Physics Stream:** Physics features (FoGI, delay-embedding radius/phase statistics, cadence regularity, signal energy = 9 features) are concatenated into the FC layers.
 *   **EWS Stream:** EWS features (radius variance trend, autocorrelation decay, phase velocity drift = 5 features) are concatenated into the FC layers.
 *   **Hyperparameters:** Trained with Adam optimizer, batch size 1024, learning rate $10^{-3}$, cosine annealing scheduling ($T_{max}=100$), gradient clipping, early stopping (patience 15), and a class-balancing oversampling factor of 3 for the minority FoG class.
@@ -164,6 +164,19 @@ The per-subject breakdown exposes high inter-subject variance. The model excels 
 1.  **Sample size.** Both datasets use $n \leq 10$ subjects. Statistical power is insufficient for definitive claims, and computed $p$-values reflect this.
 2.  **Label Shift Extent.** The model consistently identifies pre-FoG states precisely at the boundary of our 1.6-second label shift horizon for most subjects, but struggles to push prediction times significantly deeper into the future independently.
 3.  **Embedding dimension.** We used $m=2$ for interpretability, but FNN analysis typically recommends $m=3$–$6$ for gait. A higher-dimensional embedding may capture more attractor geometry at the cost of computational complexity.
+
+### 5.6 Technical Justification: The Failure of Rigid PINN Constraints
+
+A critical phase of this research involved the evaluation of **rigid physics-informed neural network (PINN) architectures**, which ultimately provided the justification for the multi-stream feature fusion approach presented here. 
+
+Initially, we hypothesized that human gait could be modeled by a deterministic limit-cycle equation (e.g., Van der Pol or Hopf oscillators). We implemented a **GRU-PINN** that minimized a residual loss based on these oscillators in its latent space. The expectation was that enforcing a clean limit-cycle structure would help the model learn the "normal" state more robustly and detect Freezing of Gait (FoG) as a dynamical anomaly.
+
+However, the GRU-PINN model exhibited several failure modes:
+1.  **Inter-subject Variability:** Rigid ODE parameters derived from standard oscillators failed to generalize across the diverse gait signatures of the $n=10$ subjects. No single set of fixed parameters could capture the patient-specific variations in gait frequency and amplitude.
+2.  **Sensitivity Loss:** The rigid constraints made the model less sensitive to subtle, non-periodic precursors that often precede FoG onset, as the model attempted to "force" the latent representation into a periodic attractor.
+3.  **Complexity of Optimization:** Tuning the $\lambda$ weighting between the data-driven loss and the physics residual proved inconsistent across folds, leading to unstable training.
+
+These findings indicate that FoG is not a purely deterministic dynamical collapse, but rather a **stochastically driven transition** influenced by patient-specific physiological noise. This negative result serves as the primary justification for our "Triple-Stream Fusion" architecture: characterizing the physics through **empirical indicators** (radius variance, autocorrelation decay) is far more effective for pathological movement prediction than imposing rigid governing equations at the constraint level.
 
 ## 6. Conclusion
 We provide preliminary evidence that integrating deterministic physical biomarkers (Freezing Index, delay-embedding features, cadence regularity) with a CNN-LSTM backbone can extend the early warning predictive lead time for Freezing of Gait compared to pure deep-learning baselines. The **Base + Physics** model achieves the best predictive performance (AUC = 0.871, Lead Time = 1.30s) predicting 1.6 seconds prior to freeze onset under strict LOSO evaluation.
