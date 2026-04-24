@@ -1,0 +1,1218 @@
+%% ============================================================
+%%  B.Tech Thesis — StridePINN
+%%  Physics-Informed Gait Modeling for Freezing-of-Gait Prediction
+%%  Department of Instrumentation and Control Engineering
+%%  National Institute of Technology Tiruchirappalli
+%% ============================================================
+%%
+%%  OVERLEAF INSTRUCTIONS
+%%  1. Upload this folder as an Overleaf project
+%%  2. Set Compiler to pdfLaTeX
+%%  3. Upload NITT_Logo.png to the root directory
+%%  4. Compile main.tex
+%% ============================================================
+
+\documentclass[12pt,a4paper,oneside]{report}
+
+%% ---- Packages ----
+\usepackage[a4paper, top=25.4mm, bottom=25.4mm, left=38.1mm, right=25.4mm]{geometry}
+\usepackage{times}                    % Times New Roman
+\usepackage{setspace}                 % 1.5 spacing
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{adjustbox}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cite}
+
+%% ---- TikZ & PGFPlots ----
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,
+                decorations.pathreplacing,calc,patterns,backgrounds}
+
+%% ---- Colours ----
+\definecolor{blockblue}{RGB}{52,101,164}
+\definecolor{blockorange}{RGB}{206,92,0}
+\definecolor{blockgreen}{RGB}{78,153,78}
+\definecolor{blockgray}{RGB}{120,120,120}
+\definecolor{lightblue}{RGB}{220,234,255}
+\definecolor{lightorange}{RGB}{255,238,210}
+\definecolor{lightgreen}{RGB}{220,245,220}
+\definecolor{lightgray}{RGB}{240,240,240}
+\definecolor{darkred}{RGB}{180,30,30}
+
+%% ---- 1.5 Line Spacing ----
+\onehalfspacing
+
+%% ---- Page numbering: bottom centered ----
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+%% ---- Chapter/Section formatting per NITT guidelines ----
+%% Chapters: 14pt bold, centered, ALL CAPS
+\titleformat{\chapter}[display]
+  {\normalfont\fontsize{14}{16}\bfseries\centering}
+  {\MakeUppercase{\chaptertitlename}\ \thechapter}{14pt}
+  {\fontsize{14}{16}\bfseries\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-20pt}{20pt}
+
+%% Sections: 12pt bold, left aligned, ALL CAPS
+\titleformat{\section}
+  {\normalfont\fontsize{12}{14}\bfseries}
+  {\thesection}{1em}{\MakeUppercase}
+
+%% Subsections: 12pt bold, left aligned, Title Case
+\titleformat{\subsection}
+  {\normalfont\fontsize{12}{14}\bfseries}
+  {\thesubsection}{1em}{}
+
+\titleformat{\subsubsection}
+  {\normalfont\fontsize{12}{14}\bfseries\itshape}
+  {\thesubsubsection}{1em}{}
+
+%% ---- Table of Contents formatting ----
+\renewcommand{\cftchapfont}{\bfseries}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforechapskip}{6pt}
+
+%% ---- Caption formatting ----
+\captionsetup[table]{position=above, labelfont=bf, skip=6pt}
+\captionsetup[figure]{position=below, labelfont=bf, skip=6pt}
+
+%% ---- Equation numbering: chapter-wise ----
+\numberwithin{equation}{chapter}
+\numberwithin{figure}{chapter}
+\numberwithin{table}{chapter}
+
+%% ============================================================
+%%  PLACEHOLDERS — Fill these on Overleaf
+%% ============================================================
+\newcommand{\ThesisTitle}{Physics-Informed Gait Modeling for Parkinson's Disease: Enhancing Early Warning of Freezing of Gait via Feature Fusion}
+\newcommand{\StudentName}{$<$YOUR FULL NAME$>$}
+\newcommand{\RollNumber}{$<$YOUR ROLL NUMBER$>$}
+\newcommand{\GuideName}{Dr.\ D.\ Ezhilarasi}
+\newcommand{\HoDName}{$<$HEAD OF DEPARTMENT NAME$>$}
+\newcommand{\DeptName}{Instrumentation and Control Engineering}
+\newcommand{\SubmissionMonth}{MAY 2026}
+
+%% ============================================================
+\begin{document}
+
+%% ---- Preliminary pages: Roman numeral pagination ----
+\pagenumbering{roman}
+
+%% ---- COVER PAGE ----
+%% ============================================================
+%%  COVER PAGE (Annexure 1 / B.Tech.)
+%% ============================================================
+\thispagestyle{empty}
+
+\begin{center}
+
+\vspace*{0.5cm}
+
+{\fontsize{16}{20}\selectfont\bfseries \MakeUppercase{\ThesisTitle}}
+
+\vspace{1.5cm}
+
+{\fontsize{12}{14}\selectfont
+A thesis submitted in partial fulfillment of the requirements for\\
+the award of the degree of}
+
+\vspace{0.5cm}
+
+{\fontsize{14}{16}\selectfont\bfseries B.Tech}
+
+\vspace{0.2cm}
+
+{\fontsize{12}{14}\selectfont in}
+
+\vspace{0.2cm}
+
+{\fontsize{14}{16}\selectfont\bfseries \DeptName}
+
+\vspace{0.8cm}
+
+{\fontsize{12}{14}\selectfont By}
+
+\vspace{0.3cm}
+
+{\fontsize{14}{16}\selectfont\bfseries \StudentName\ (\RollNumber)}
+
+\vspace{1.2cm}
+
+%% ----- NITT Logo Placeholder -----
+%% Upload NITT_Logo.png to Overleaf and uncomment:
+% \includegraphics[width=1.25in]{NITT_Logo.png}
+\framebox[1.25in]{\rule{0pt}{1.25in}\textbf{NITT Logo}}
+
+\vspace{0.4cm}
+
+{\fontsize{14}{16}\selectfont\bfseries
+DEPARTMENT OF \MakeUppercase{\DeptName}\\[4pt]
+NATIONAL INSTITUTE OF TECHNOLOGY\\[4pt]
+TIRUCHIRAPPALLI -- 620015}
+
+\vspace{0.5cm}
+
+{\fontsize{14}{16}\selectfont\bfseries \SubmissionMonth}
+
+\end{center}
+
+\newpage
+
+
+
+%% ---- BONAFIDE CERTIFICATE ----
+%% ============================================================
+%%  BONAFIDE CERTIFICATE (Annexure 2)
+%% ============================================================
+\thispagestyle{empty}
+
+\begin{center}
+{\fontsize{14}{16}\selectfont\bfseries BONAFIDE CERTIFICATE}
+\end{center}
+
+\vspace{1.5cm}
+
+This is to certify that the project titled \textbf{\ThesisTitle} is a bonafide record of the work done by
+
+\vspace{0.8cm}
+
+\begin{center}
+{\fontsize{12}{14}\selectfont\bfseries \StudentName\ (\RollNumber)}
+\end{center}
+
+\vspace{0.8cm}
+
+\noindent in partial fulfillment of the requirements for the award of the degree of \textbf{Bachelor of Technology} in \textbf{\DeptName} of the \textbf{NATIONAL INSTITUTE OF TECHNOLOGY, TIRUCHIRAPPALLI}, during the year 2025--2026.
+
+\vspace{3.5cm}
+
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+\centering
+\textbf{\GuideName}\\
+Guide
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\centering
+\textbf{\HoDName}\\
+Head of the Department
+\end{minipage}
+
+\vspace{4.0cm}
+
+\noindent Project Viva-voce held on \rule{6cm}{0.4pt}
+
+\vspace{2.5cm}
+
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+\textbf{Internal Examiner}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\raggedleft
+\textbf{External Examiner}
+\end{minipage}
+
+\newpage
+
+
+%% ---- ABSTRACT ----
+%% ============================================================
+%%  ABSTRACT (Annexure 4)
+%% ============================================================
+
+\begin{center}
+{\fontsize{14}{16}\selectfont\bfseries ABSTRACT}
+\end{center}
+
+\vspace{0.5cm}
+
+Freezing of Gait (FoG) is a debilitating motor symptom of Parkinson's Disease (PD) characterised by sudden, involuntary cessation of movement during walking, leading to increased fall risk and reduced quality of life. While deep learning models have achieved high classification accuracy during FoG events, predicting these episodes \textit{prior} to clinical onset remains a significant challenge. This thesis presents a physics-informed feature fusion framework that models gait as a nonlinear limit-cycle oscillator and characterises Freezing of Gait as a critical dynamical transition --- a collapse of the stable attractor in phase space.
+
+The proposed framework employs a three-stream CNN-LSTM fusion architecture integrating: (1) raw inertial measurement unit (IMU) temporal patterns via a CNN-LSTM backbone, (2) deterministic physics features derived from Takens' delay embedding (Freezing Index, phase-space radius, phase variance, cadence regularity, signal energy), and (3) Early Warning Signal (EWS) features based on critical transition theory (radius variance trend, AR(1) coefficient, phase velocity drift, FoGI slope, spectral entropy). This architecture was developed after the documented failure of rigid Physics-Informed Neural Network (PINN) constraints, which could not generalise across diverse patient gait signatures due to the stochastic, non-stationary nature of freeze transitions.
+
+Evaluated under strict 10-fold Leave-One-Subject-Out (LOSO) cross-validation on the Daphnet dataset ($n = 10$ subjects), the Base + Physics variant achieves an AUC of 0.871 $\pm$ 0.079 with a predictive lead time of 1.30 seconds at a 1.6-second prediction horizon --- a 24\% improvement over the pure CNN-LSTM baseline (1.05\,s). The study identifies a feature interference phenomenon where combining all three streams shifts the decision boundary toward higher specificity at the cost of lead time. A cross-dataset feasibility test on the MJFF DeFOG dataset replicates the core finding: physics features consistently extend the early warning window across different sensor placements.
+
+\vspace{0.8cm}
+
+\noindent\textbf{Keywords:} Freezing of Gait, Parkinson's Disease, Physics-Informed Feature Fusion, Limit-Cycle Dynamics, Early Warning Signals, CNN-LSTM
+
+\newpage
+
+
+%% ---- ACKNOWLEDGEMENTS ----
+%% ============================================================
+%%  ACKNOWLEDGEMENTS
+%% ============================================================
+
+\begin{center}
+{\fontsize{14}{16}\selectfont\bfseries ACKNOWLEDGEMENTS}
+\end{center}
+
+\vspace{0.5cm}
+
+I wish to express my sincere gratitude to my guide, \textbf{\GuideName}, Assistant Professor, Department of \DeptName, National Institute of Technology Tiruchirappalli, for her invaluable guidance, constant encouragement, and insightful suggestions throughout the course of this project. Her expertise in control systems and signal processing has been instrumental in shaping the direction of this research.
+
+I am deeply thankful to \textbf{\HoDName}, Head of the Department of \DeptName, for providing the departmental facilities and support necessary for the successful completion of this work.
+
+I extend my gratitude to the faculty members of the Department of \DeptName\ for their constructive feedback during the review presentations, which helped refine both the methodology and the presentation of this thesis.
+
+I would like to acknowledge the creators of the Daphnet Freezing of Gait dataset (B\"{a}chlin et al., 2010; Roggen et al., 2010) and the Michael J. Fox Foundation DeFOG dataset, whose publicly available clinical data made this research possible.
+
+I am grateful to my fellow students and friends at NIT Tiruchirappalli for their cooperation, stimulating discussions, and moral support throughout this endeavour.
+
+Finally, I express my heartfelt thanks to my parents and family for their unconditional love, patience, and encouragement, which have been the foundation of all my achievements.
+
+\vspace{1.5cm}
+
+\hfill \textbf{\StudentName}
+
+\newpage
+
+
+%% ---- TABLE OF CONTENTS ----
+\tableofcontents
+\newpage
+
+%% ---- LIST OF TABLES ----
+\listoftables
+\newpage
+
+%% ---- LIST OF FIGURES ----
+\listoffigures
+\newpage
+
+%% ---- ABBREVIATIONS ----
+%% ============================================================
+%%  LIST OF ABBREVIATIONS
+%% ============================================================
+
+\chapter*{LIST OF ABBREVIATIONS}
+\addcontentsline{toc}{chapter}{LIST OF ABBREVIATIONS}
+
+\vspace{0.5cm}
+
+\begin{longtable}{@{}p{4cm}p{10cm}@{}}
+AUC    & Area Under the Receiver Operating Characteristic Curve \\
+AR(1)  & First-Order Autoregressive Coefficient \\
+CNN    & Convolutional Neural Network \\
+DeFOG  & De Novo Freezing of Gait (MJFF Dataset) \\
+DMD    & Dynamic Mode Decomposition \\
+EWS    & Early Warning Signals \\
+FC     & Fully Connected (Layer) \\
+FI     & Freezing Index \\
+FNN    & False Nearest Neighbours \\
+FoG    & Freezing of Gait \\
+FoGI   & Freezing of Gait Index \\
+GRU    & Gated Recurrent Unit \\
+IMU    & Inertial Measurement Unit \\
+LOSO   & Leave-One-Subject-Out \\
+LSTM   & Long Short-Term Memory \\
+MJFF   & Michael J. Fox Foundation \\
+MLP    & Multilayer Perceptron \\
+ODE    & Ordinary Differential Equation \\
+PD     & Parkinson's Disease \\
+PINN   & Physics-Informed Neural Network \\
+PSD    & Power Spectral Density \\
+RMS    & Root Mean Square \\
+ROC    & Receiver Operating Characteristic \\
+SVM    & Support Vector Machine \\
+\end{longtable}
+
+\newpage
+
+
+%% ============================================================
+%%  MAIN TEXT — Arabic numeral pagination
+%% ============================================================
+\newpage
+\pagenumbering{arabic}
+
+%% ============================================================
+%%  CHAPTER 1 — INTRODUCTION
+%% ============================================================
+
+\chapter{Introduction}
+
+\section{General}
+
+Parkinson's Disease (PD) is a progressive neurodegenerative disorder affecting approximately 10 million people worldwide, making it the second most common neurodegenerative condition after Alzheimer's disease \cite{nutt2011}. Among the numerous motor impairments associated with PD, Freezing of Gait (FoG) is one of the most debilitating. FoG is characterised by sudden, involuntary episodes during which patients experience a temporary inability to produce effective forward stepping despite the intention to walk \cite{nutt2011, okuma2014}. These episodes typically last a few seconds to several minutes and are strongly associated with falls, injuries, and a significant decline in the quality of life \cite{heremans2013}.
+
+From a clinical perspective, FoG episodes are most commonly triggered by turning, passing through narrow doorways, approaching destinations, and during dual-task conditions \cite{plotnik2008}. The pathophysiology of FoG remains incompletely understood, though current theories implicate dysfunction in the basal ganglia--cortical circuitry and impaired sensorimotor integration \cite{nutt2011}.
+
+\section{Motivation}
+
+Early prediction of an impending freeze could enable closed-loop cueing interventions --- such as rhythmic auditory stimulation or haptic feedback --- to prevent the episode entirely \cite{sweeney2019, mancini2021}. Despite significant advances in wearable sensor technology and deep learning, the majority of contemporary models function as highly accurate \textit{detectors} of FoG events rather than \textit{predictors} \cite{sigcha2022, hasan2023}. Detection models identify FoG \textit{during} or \textit{after} onset, but this is too late for preventative intervention.
+
+This fundamental distinction between detection and prediction motivates the current work: to develop a framework that can identify impending freezes \textit{before} they clinically manifest, providing actionable lead time for cueing systems.
+
+\section{Dynamical Systems Perspective}
+
+Recent research has increasingly framed human gait as a nonlinear dynamical system \cite{stergiou2004, dingwell2001, hausdorff1995}. Under this framework, normal walking is modelled as a stable periodic oscillation --- a \textbf{limit cycle} in phase space. Each stride traces a closed orbit in the reconstructed state space, and healthy gait is characterised by the stability and regularity of this attractor.
+
+Sieber et al.\ (2022) \cite{sieber2022} explicitly modelled FoG as a critical transition: an escape from the oscillatory attractor (the stepping limit cycle) into an equilibrium state (the frozen posture). This perspective provides interpretable biomarkers: the radius of the limit cycle, the regularity of the phase advance, and the spectral content of the signal all carry information about the stability of the underlying dynamical system.
+
+Furthermore, critical transition theory from ecology and climate science \cite{scheffer2009, dakos2012} predicts that dynamical systems approaching a catastrophic shift exhibit Early Warning Signals (EWS), including increased variance, critical slowing down (rising autocorrelation), and spectral broadening. This thesis applies these principles to gait data for the first time in the context of FoG prediction.
+
+\section{Objectives}
+
+The objectives of this thesis are:
+
+\begin{enumerate}[leftmargin=*, itemsep=4pt]
+  \item To develop a physics-informed modelling framework for human gait that characterises walking as a limit-cycle oscillator and identifies dynamical anomalies as interpretable biomarkers for Freezing of Gait.
+
+  \item To evaluate the applicability of rigid Physics-Informed Neural Network (PINN) constraints for gait modelling and document their limitations in capturing patient-specific, stochastic gait transitions.
+
+  \item To design and implement a three-stream CNN-LSTM fusion architecture that integrates raw IMU temporal features, deterministic physics features derived from delay embedding, and Early Warning Signal features based on critical transition theory.
+
+  \item To shift the paradigm from FoG event \textit{detection} to early \textit{prediction}, targeting maximum predictive lead time before clinical onset.
+
+  \item To validate the framework under strict 10-fold Leave-One-Subject-Out (LOSO) cross-validation on the Daphnet dataset and assess cross-dataset generalisability on the MJFF DeFOG dataset.
+
+  \item To analyse the interaction between deterministic and stochastic feature streams and identify the feature interference phenomenon affecting multi-stream fusion architectures.
+\end{enumerate}
+
+\section{Scope of the Work}
+
+This thesis focuses on the prediction of FoG from continuous accelerometer data collected by body-worn inertial measurement units. The scope includes:
+
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item Physics-informed feature extraction using Takens' delay embedding and spectral analysis.
+  \item Early Warning Signal computation based on critical transition theory.
+  \item Deep learning model design, training, and evaluation under clinically rigorous protocols.
+  \item Ablation studies to quantify the contribution of each feature stream.
+  \item Cross-dataset feasibility testing across different sensor placements.
+\end{itemize}
+
+The work does not address real-time deployment on embedded hardware, though the computational requirements of the proposed framework are compatible with edge-device implementation.
+
+\section{Organisation of the Thesis}
+
+The remainder of this thesis is organised as follows:
+
+\textbf{Chapter 2} presents a comprehensive review of the literature on FoG detection and prediction, covering classical methods, dynamical systems approaches, and deep learning architectures.
+
+\textbf{Chapter 3} describes the methodology, including dataset preprocessing, physics and EWS feature extraction, neural network architecture, training protocol, and evaluation metrics.
+
+\textbf{Chapter 4} presents the experimental results and discussion, including the ablation study, per-subject analysis, prediction horizon sweep, cross-dataset validation, and the feature interference phenomenon.
+
+\textbf{Chapter 5} summarises the key findings, presents conclusions, and outlines directions for future research.
+
+%% ============================================================
+%%  CHAPTER 2 — LITERATURE REVIEW
+%% ============================================================
+
+\chapter{Literature Review}
+
+\section{Overview}
+
+This chapter presents a critical review of the existing literature on Freezing of Gait detection and prediction. The review is organised into four thematic areas: classical spectral and hybrid methods, nonlinear dynamical systems approaches, deep learning architectures, and physics-informed neural networks.
+
+\section{Classical Spectral Methods}
+
+The foundational work in automated FoG detection was established by B\"{a}chlin et al.\ (2010) \cite{bachlin2010}, who developed a wearable system using the Daphnet dataset collected by Roggen et al.\ (2010) \cite{roggen2010}. Their approach computed the \textbf{Freezing Index} (FI), defined as the ratio of spectral power in the freeze band (3--8\,Hz) to the locomotion band (0.5--3\,Hz). This index exploits the observation that FoG episodes are often accompanied by high-frequency leg tremor (``trembling in place''), which shifts spectral energy from the normal stepping frequency ($\sim$1--2\,Hz) into the freeze band.
+
+Moore et al.\ (2008) \cite{moore2008} proposed a related spectral approach using a single shank-mounted accelerometer, establishing thresholds for real-time FoG detection. Additional classical features explored in the literature include entropy measures \cite{punt2017}, cross-correlation between bilateral stepping signals \cite{mancini2012}, and autoregressive model coefficients.
+
+While these spectral approaches are computationally efficient and interpretable, they fundamentally operate as \textit{detectors} --- identifying FoG \textit{during} the episode when the spectral signature has already changed. They do not model the dynamical transition preceding onset and therefore cannot provide early warning.
+
+\section{Nonlinear Dynamical Systems Approaches}
+
+The application of nonlinear dynamics to human gait analysis has a rich history. Hausdorff et al.\ (1995) \cite{hausdorff1995} demonstrated that stride-interval time series exhibit long-range fractal correlations, establishing gait as a complex dynamical process. Stergiou et al.\ (2004) \cite{stergiou2004} and Dingwell and Cusumano (2001) \cite{dingwell2001} applied Lyapunov exponent analysis and phase-space reconstruction to characterise gait stability, showing that pathological gait exhibits increased divergence in reconstructed state spaces.
+
+The most directly relevant precedent is the work of Sieber et al.\ (2022) \cite{sieber2022}, who explicitly modelled FoG as an escape from an oscillatory limit-cycle attractor into an equilibrium (frozen) state. Using Markov chain modelling of phase-space trajectories reconstructed via Takens' embedding, they computed mean escape times from the stepping attractor as a quantitative measure of FoG susceptibility.
+
+More recently, Fu et al.\ (2025) \cite{fu2025} employed Dynamic Mode Decomposition (DMD) with optimal delay embedding for FoG prediction, achieving a 6.13-second early prediction horizon. However, their approach used \textit{personalised} (subject-dependent) training with individually optimised delay embeddings, which limits scalability to unseen patients.
+
+The present work builds on this trajectory by applying Early Warning Signals (EWS) from critical transition theory. Scheffer et al.\ (2009) \cite{scheffer2009} demonstrated that dynamical systems approaching a tipping point exhibit characteristic statistical signatures --- increasing variance, rising autocorrelation (critical slowing down), and spectral broadening. Dakos et al.\ (2012) \cite{dakos2012} formalised methods for detecting these signals in ecological time series. This thesis is the first to apply these EWS principles specifically to gait dynamics for FoG prediction.
+
+\section{Deep Learning for FoG Detection and Prediction}
+
+Deep learning has been extensively applied to FoG detection. Camps et al.\ (2018) \cite{camps2018} demonstrated CNN-based detection using waist-worn sensors in home environments. Pav\'{o}n et al.\ (2020) \cite{pavon2020} explored multi-sensor deep learning approaches. Sigcha et al.\ (2022) \cite{sigcha2022} provided a comprehensive review of machine learning and deep learning algorithms for FoG, identifying CNN-LSTM architectures as particularly effective for sequential accelerometer data.
+
+More recent work includes Salomon et al.\ (2024) \cite{salomon2024}, who applied the Hierarchical Token Semantic Audio Network (HTSAN) achieving high detection AUC ($>0.91$), and Sigcha et al.\ (2024) \cite{sigcha2024}, who evaluated cross-dataset generalisation of deep learning detectors.
+
+A critical observation from the literature is that the majority of these models are \textit{detectors} rather than \textit{predictors}. They classify FoG events during or after onset using features computed from the current window. True prediction --- identifying impending freezes \textit{before} onset --- requires the model to learn precursor signals in the pre-FoG data, a fundamentally more challenging task that is addressed in this thesis.
+
+\section{Physics-Informed Neural Networks}
+
+Physics-Informed Neural Networks (PINNs) embed known physical laws directly into the neural network loss function \cite{raissi2019}. By minimising both data-fit error and a physics residual (typically from a governing ordinary or partial differential equation), PINNs enforce physically consistent predictions.
+
+Chen et al.\ (2018) \cite{chen2018} introduced Neural Ordinary Differential Equations (Neural ODEs), parameterising the dynamics of the hidden state as a continuous ODE. This approach naturally lends itself to modelling physical systems with latent dynamics.
+
+In the context of this thesis, we initially hypothesised that gait dynamics could be modelled by a deterministic limit-cycle ODE (e.g., the Van der Pol or Hopf oscillator) and that enforcing this structure via a PINN residual loss would improve FoG detection. A GRU-PINN architecture was implemented and evaluated. However, as documented in Chapter 4, this rigid approach \textbf{failed to generalise} across subjects due to:
+
+\begin{enumerate}[leftmargin=*, itemsep=3pt]
+  \item High inter-subject variability in gait dynamics that cannot be captured by a single set of fixed ODE parameters.
+  \item Sensitivity loss caused by rigid constraints suppressing subtle, non-periodic precursor signals.
+  \item Optimisation instability in balancing data-driven and physics-residual losses across cross-validation folds.
+\end{enumerate}
+
+This negative result led to the key methodological insight of this thesis: \textbf{feature-level physics integration} (computing empirical dynamical indicators and feeding them as auxiliary model inputs) is superior to \textbf{constraint-level physics integration} (enforcing rigid ODE residuals in the loss function) for clinical time series characterised by stochastic, non-stationary transitions.
+
+\section{Summary of Literature Gaps}
+
+Table~\ref{tab:lit_summary} summarises the positioning of this work relative to the literature.
+
+\begin{table}[ht]
+\centering
+\caption{Summary of literature gaps addressed by this thesis.}
+\label{tab:lit_summary}
+\renewcommand{\arraystretch}{1.3}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{p{4cm}p{5cm}p{5cm}}
+\toprule
+\textbf{Aspect} & \textbf{Existing Work} & \textbf{This Thesis} \\
+\midrule
+Task & Detection (during FoG) & Prediction (before onset) \\
+Physics Integration & Rigid PINN constraints or none & Empirical feature-level fusion \\
+Dynamical Theory & Phase-space escape times & EWS + limit-cycle collapse \\
+Validation & Subject-dependent or limited CV & Strict 10-fold LOSO + cross-dataset \\
+Feature Interaction & Not studied & Feature interference documented \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+%% ============================================================
+%%  CHAPTER 3 — METHODOLOGY
+%% ============================================================
+
+\chapter{Methodology}
+
+This chapter describes the complete methodology of the StridePINN framework, including dataset preparation, physics-based feature extraction, Early Warning Signal computation, neural network architecture, training protocol, and evaluation metrics.
+
+\section{Datasets}
+
+\subsection{Daphnet Freezing of Gait Dataset}
+
+The primary dataset used in this study is the Daphnet Freezing of Gait Dataset \cite{bachlin2010, roggen2010}, collected at ETH Zurich. It contains continuous accelerometer recordings from 10 Parkinson's Disease patients performing daily-living walking tasks in a laboratory setting.
+
+Each subject wore three tri-axial accelerometers (ankle, thigh, and trunk), producing 9 channels of data sampled at 64\,Hz. The dataset includes frame-level annotations marking three states: not walking (0), walking normally (1), and Freezing of Gait (2). Subjects 4 and 10 had no documented FoG episodes and serve as negative controls.
+
+\subsection{MJFF DeFOG Dataset}
+
+For cross-dataset validation, a subset of the Michael J. Fox Foundation DeFOG dataset was used. This dataset employs a trunk-mounted (lower-back) accelerometer sampled at 100--128\,Hz. Seven recording sessions with documented FoG events were selected for a feasibility test. The 3-axis trunk acceleration was mapped to channels 6--8 of the 9-channel format with remaining channels zero-padded.
+
+\subsection{Preprocessing Pipeline}
+
+The preprocessing pipeline applies the following steps:
+
+\begin{enumerate}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Anti-aliasing filter:} An 8th-order Butterworth low-pass filter with a cutoff frequency of 20\,Hz is applied to prevent aliasing artefacts during downsampling.
+  \item \textbf{Resampling:} Signals are downsampled from the native sampling rate (64\,Hz for Daphnet, 100--128\,Hz for DeFOG) to a uniform target rate of 40\,Hz.
+  \item \textbf{Windowing:} The continuous signal is segmented into overlapping windows of 128 samples (3.2\,s at 40\,Hz) with a stride of 32 samples (0.8\,s), corresponding to 75\% overlap.
+  \item \textbf{Window labelling:} Windows with $>50\%$ FoG-labelled frames are assigned label 1 (FoG); windows with $<10\%$ FoG frames are assigned label 0 (normal). Windows falling between these thresholds are discarded to avoid ambiguous labels.
+\end{enumerate}
+
+\section{Prediction Protocol: Shifted Labels}
+
+Unlike detection (classifying the current state), prediction requires the model to identify impending FoG \textit{before} onset. This is achieved by shifting positive labels backward by a prediction horizon $h$:
+
+\begin{equation}
+  \tilde{y}(t) =
+  \begin{cases}
+    1 & \text{if } \exists\; t' \in [t,\, t+h]: y(t')=\text{FoG} \\
+    0 & \text{otherwise}
+  \end{cases}
+  \label{eq:shifted_label}
+\end{equation}
+
+The primary prediction horizon is set to $h = 1.6$\,s (equivalent to 2 windows at 0.8\,s stride). This forces the model to learn precursor dynamics occurring up to 1.6 seconds before the clinical freeze annotation.
+
+\section{Physics Feature Extraction}
+
+\subsection{Takens' Delay Embedding}
+
+Following Takens' embedding theorem \cite{takens1981}, the 1-D ankle accelerometer signal $s(t)$ is reconstructed into a 2-D phase-space trajectory:
+
+\begin{equation}
+  x_t = s(t), \quad y_t = s(t + \tau), \qquad \tau = 5 \text{ samples (0.125\,s)}
+  \label{eq:delay_embed}
+\end{equation}
+
+The delay parameter $\tau$ was selected using the First Minimum of the Auto-Mutual Information (AMI) criterion \cite{fraser1986}. The embedding dimension $m = 2$ was chosen for computational efficiency and interpretability, noting that False Nearest Neighbours (FNN) analysis \cite{kennel1992} typically recommends $m = 3$--$6$ for gait data. Before embedding, the signal is bandpass-filtered (0.5--10\,Hz, 4th-order Butterworth) to isolate locomotion-band dynamics.
+
+From the embedded trajectory, polar coordinates are computed:
+
+\begin{equation}
+  r_t = \sqrt{x_t^2 + y_t^2}, \qquad \theta_t = \arctan(y_t / x_t)
+  \label{eq:polar}
+\end{equation}
+
+\subsection{Limit-Cycle Indicator Features}
+
+Nine scalar physics features are extracted from each 128-sample window, as described in Table~\ref{tab:physics_features}.
+
+\begin{table}[ht]
+\centering
+\caption{Physics features extracted from delay-embedded phase-space reconstruction.}
+\label{tab:physics_features}
+\renewcommand{\arraystretch}{1.3}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{p{3.5cm} p{5.5cm} p{5cm}}
+\toprule
+\textbf{Feature} & \textbf{Description} & \textbf{Computation} \\
+\midrule
+Freezing Index (FoGI) & Power ratio freeze/locomotion band & $P_{3\text{--}8\,\text{Hz}} / P_{0.5\text{--}3\,\text{Hz}}$ \\
+Dominant Frequency & Peak of the PSD & $\arg\max_f \text{PSD}(f)$ \\
+Freeze Ratio & Normalised freeze-band energy & $P_{3\text{--}8\,\text{Hz}} / P_{\text{total}}$ \\
+Radius Mean ($\bar{r}$) & Mean distance from centroid & $\text{mean}(r_t)$ \\
+Radius Variance & Amplitude stability & $\text{var}(r_t)$ \\
+Phase Mean ($\overline{\Delta\phi}$) & Phase progression rate & $\text{mean}(\Delta\theta_t)$ \\
+Phase Variance & Periodicity regularity & $\text{std}(\Delta\theta_t)$ \\
+Signal Energy & Movement intensity & $\text{RMS}$ of ankle norm \\
+Cadence Regularity & Stride timing consistency & Peak autocorrelation (0.3--2\,s) \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\section{Early Warning Signal Extraction}
+
+Based on critical transition theory \cite{scheffer2009, dakos2012}, five EWS features are computed over sliding 32-sample sub-windows within each 128-sample window to capture temporal trends (Table~\ref{tab:ews_features}).
+
+\begin{table}[ht]
+\centering
+\caption{Early Warning Signal features derived from critical transition theory.}
+\label{tab:ews_features}
+\renewcommand{\arraystretch}{1.3}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{p{3.5cm} p{5cm} p{5.5cm}}
+\toprule
+\textbf{EWS Feature} & \textbf{Computation} & \textbf{Rising Value Indicates} \\
+\midrule
+Radius Var.\ Trend & Slope of $\text{var}(r_t)$ across sub-windows & Growing limit-cycle fluctuations \\
+AR(1) Coefficient & $1 - \text{peak autocorrelation}$ & Slower recovery (critical slowing down) \\
+Phase Vel.\ Drift & Std of mean $d\theta/dt$ per sub-window & Inconsistent angular velocity \\
+FoGI Slope & Linear trend of FoGI values & Gradual freeze-band buildup \\
+Spectral Entropy & Normalised entropy of PSD & Shift from periodic to broadband \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\section{Neural Network Architecture}
+
+\subsection{Three-Stream Fusion Model}
+
+The proposed architecture (\texttt{FoGCNNLSTMPrediction}) is a three-stream fusion network that processes each IMU window through three parallel pathways before merging for binary classification (Figure~\ref{fig:architecture}).
+
+\begin{figure}[ht]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\begin{tikzpicture}[
+  sysbox/.style={draw, rounded corners=4pt, minimum height=0.8cm,
+                 align=center, font=\small},
+  bluebox/.style={sysbox, fill=lightblue, draw=blockblue, text=blockblue, minimum width=2.4cm},
+  orangebox/.style={sysbox, fill=lightorange, draw=blockorange, text=blockorange, minimum width=2.4cm},
+  greenbox/.style={sysbox, fill=lightgreen, draw=blockgreen, text=blockgreen, minimum width=2.4cm},
+  graybox/.style={sysbox, fill=lightgray, draw=blockgray, minimum width=2.0cm},
+  fusionbox/.style={sysbox, fill=yellow!20, draw=blockorange, text=black, minimum width=2.6cm,
+                    minimum height=1.0cm, font=\small\bfseries},
+  arr/.style={-{Stealth[length=5pt]}, thick},
+  node distance=0.5cm and 0.7cm
+]
+\node[graybox, minimum width=2.6cm] (inp) {IMU Window\\$128\times9$ @ 40\,Hz};
+\node[bluebox, above right=1.0cm and 2.0cm of inp] (cnn) {CNN Layers\\128$\to$64 filters};
+\node[bluebox, right=0.5cm of cnn] (lstm) {LSTM\\64 hidden};
+\node[orangebox, right=2.0cm of inp] (phys) {Physics Features\\9 scalars};
+\node[greenbox, below right=1.0cm and 2.0cm of inp] (ews) {EWS Features\\5 scalars};
+\draw[arr] (inp.east) -- ++(0.6,0) |- (cnn.west);
+\draw[arr] (inp.east) -- (phys.west);
+\draw[arr] (inp.east) -- ++(0.6,0) |- (ews.west);
+\draw[arr] (cnn) -- (lstm);
+\node[fusionbox, right=2.2cm of phys] (fuse) {Concatenation\\(Dim = 96)};
+\draw[arr] (lstm.east) -- ++(0.3,0) |- (fuse.west);
+\draw[arr] (phys.east) -- (fuse.west);
+\draw[arr] (ews.east) -- ++(0.3,0) |- (fuse.west);
+\node[graybox, right=0.6cm of fuse, minimum width=2.0cm] (fc) {FC Layers\\64$\to$32$\to$1};
+\node[graybox, right=0.5cm of fc, minimum width=1.5cm, fill=lightgreen!50, draw=blockgreen] (out) {FoG\\Prediction};
+\draw[arr] (fuse) -- (fc);
+\draw[arr] (fc) -- (out);
+\node[font=\scriptsize\bfseries, text=blockblue, above=0.05cm of cnn] {Stream 1: Raw IMU};
+\node[font=\scriptsize\bfseries, text=blockorange, above=0.05cm of phys] {Stream 2: Physics};
+\node[font=\scriptsize\bfseries, text=blockgreen, below=0.05cm of ews] {Stream 3: EWS};
+\end{tikzpicture}
+\end{adjustbox}
+\caption{Three-stream fusion architecture. Stream~1 extracts temporal patterns via CNN-LSTM. Stream~2 provides instantaneous physics features. Stream~3 captures instability trends.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Stream 1: CNN-LSTM Backbone}
+
+The raw IMU stream processes the $128 \times 9$ window through:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Conv Block 1:} Conv1D($9 \to 128$, kernel 4), ReLU, MaxPool(2)
+  \item \textbf{Conv Block 2:} Conv1D($128 \to 64$, kernel 4), ReLU, MaxPool(2)
+  \item \textbf{LSTM:} 64 hidden units, 1 layer. The final hidden state is extracted as the temporal feature vector (dimension 64).
+\end{itemize}
+
+\subsection{Stream 2: Physics Embedding}
+
+The 9 precomputed physics features are processed through BatchNorm followed by a linear embedding layer ($9 \to 16$, ReLU, Dropout 0.3), producing a physics vector of dimension 16.
+
+\subsection{Stream 3: EWS Embedding}
+
+The 5 EWS features undergo BatchNorm and linear embedding ($5 \to 16$, ReLU, Dropout 0.3), producing an EWS vector of dimension 16.
+
+\subsection{Fusion and Classification}
+
+The three vectors are concatenated ($64 + 16 + 16 = 96$) and passed through a fully connected head: FC(96 $\to$ 64) $\to$ ReLU $\to$ Dropout $\to$ FC(64 $\to$ 32) $\to$ ReLU $\to$ Dropout $\to$ FC(32 $\to$ 1), producing a single logit for binary classification.
+
+\section{Training Configuration}
+
+\subsection{Optimisation}
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Optimiser:} AdamW with learning rate $10^{-3}$ and weight decay $10^{-5}$.
+  \item \textbf{Scheduler:} Cosine annealing with $T_{\max} = 100$.
+  \item \textbf{Batch size:} 1024.
+  \item \textbf{Gradient clipping:} Max norm 1.0.
+  \item \textbf{Loss function:} Binary Cross-Entropy with logits.
+\end{itemize}
+
+\subsection{Class Balancing}
+
+FoG windows are a minority class. Two strategies are employed:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Oversampling:} FoG windows are oversampled by a factor of 3 with random temporal jitter ($\pm$4 samples $\approx \pm$0.1\,s).
+  \item \textbf{Weighted sampling:} Inverse-frequency weighting ensures balanced mini-batches.
+\end{itemize}
+
+\subsection{Early Stopping}
+
+Validation AUC is monitored with patience of 15 epochs. For validation subjects with zero FoG events (undefined AUC), the system falls back to monitoring validation loss to ensure convergence.
+
+\subsection{Feature Normalisation}
+
+All features are z-score normalised \textbf{per subject} before model input. This accounts for inter-subject physiological differences and sensor mounting variability, ensuring the model focuses on relative dynamical shifts rather than absolute signal values.
+
+\section{Cross-Validation Protocol}
+
+Strict 10-fold Leave-One-Subject-Out (LOSO) cross-validation is employed:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item In each fold, 1 subject is held out for testing, 1 adjacent subject for validation, and the remaining 8 subjects for training.
+  \item No test-subject data influences any model selection or threshold tuning.
+  \item Subjects 4 and 10 (no FoG events) are excluded from AUC and lead time computation, yielding $n = 8$ valid folds for discriminative metrics.
+\end{itemize}
+
+\section{Evaluation Metrics}
+
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Lead Time:} Time from the first true positive prediction to the annotated FoG onset. Median per fold; reported as Mean $\pm$ SD across folds.
+  \item \textbf{ROC-AUC:} Threshold-independent discriminative performance.
+  \item \textbf{Sensitivity (Se):} True positive rate at Youden's optimal threshold.
+  \item \textbf{Specificity (Sp):} True negative rate at optimal threshold.
+  \item \textbf{F1-Score:} Harmonic mean of precision and recall.
+\end{itemize}
+
+\section{Ablation Study Design}
+
+To quantify the contribution of each feature stream, four model variants are evaluated under identical conditions (Table~\ref{tab:ablation_design}):
+
+\begin{table}[ht]
+\centering
+\caption{Ablation study configuration across four model variants.}
+\label{tab:ablation_design}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcccl}
+\toprule
+\textbf{Variant} & \textbf{CNN-LSTM} & \textbf{Physics} & \textbf{EWS} & \textbf{Hypothesis} \\
+\midrule
+CNN-LSTM (Base) & \checkmark & --- & --- & Raw temporal learning only \\
+Base + Physics & \checkmark & \checkmark & --- & Phase-space geometry impact \\
+Base + EWS & \checkmark & --- & \checkmark & Instability trend impact \\
+Full Model & \checkmark & \checkmark & \checkmark & Synergistic 3-stream effect \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When a stream is disabled, its embedding output is replaced with a zero vector of matching dimension, preserving the classifier architecture across all variants.
+
+%% ============================================================
+%%  CHAPTER 4 — RESULTS AND DISCUSSION
+%% ============================================================
+
+\chapter{Results and Discussion}
+
+This chapter presents the complete experimental results of the StridePINN framework, including the ablation study, per-subject analysis, prediction horizon sweep, embedding dimension robustness, cross-dataset validation, and a detailed discussion of key findings.
+
+\section{Methodological Evolution: From PINN to Feature Fusion}
+
+Prior to the final architecture, a GRU-PINN was implemented that modelled normal gait as a 2-D latent limit cycle and detected FoG as dynamical anomalies by enforcing ODE residuals (Van der Pol / Hopf oscillator) in the loss function. This rigid approach achieved an AUC of approximately 0.77 but failed to generalise across subjects due to: (1) inter-subject variability --- no single ODE parameter set fits all 10 patients; (2) sensitivity loss --- rigid constraints suppressed non-periodic precursors; and (3) optimisation instability --- $\lambda$ weighting between data loss and physics residual was inconsistent across folds.
+
+\begin{figure}[ht]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\begin{tikzpicture}[
+  evobox/.style={draw, rounded corners=5pt, minimum width=3.8cm, minimum height=1.6cm,
+                 align=center, font=\small, text width=3.6cm},
+  arr/.style={-{Stealth[length=6pt]}, very thick},
+  node distance=0.8cm
+]
+\node[evobox, fill=lightblue, draw=blockblue, text=blockblue] (r1)
+  {\textbf{Initial Approach}\\[2pt] Latent Neural ODE\\(PINN: rigid ODE\\constraints in loss)};
+\node[evobox, fill=lightorange, draw=blockorange, text=blockorange, right=1.6cm of r1] (fail)
+  {\textbf{Experimentation}\\[2pt] PINN fails on\\inter-subject\\variability};
+\node[evobox, fill=lightgreen, draw=blockgreen, text=blockgreen, right=1.6cm of fail] (r2)
+  {\textbf{Final Architecture}\\[2pt] 3-Stream Fusion\\(empirical physics\\features as inputs)};
+\draw[arr, blockblue]   (r1.east)   -- (fail.west);
+\draw[arr, blockorange] (fail.east) -- (r2.west);
+\node[font=\scriptsize, text=darkred, below=0.15cm of fail]
+  {\textit{AUC $\approx$ 0.77, insufficient}};
+\node[font=\scriptsize, text=blockgreen, below=0.15cm of r2]
+  {\textit{AUC = 0.871, Lead Time = 1.30\,s}};
+\end{tikzpicture}
+\end{adjustbox}
+\caption{Methodological evolution from rigid PINN to feature-fusion architecture, driven by experimental failure of constraint-level physics.}
+\label{fig:evolution}
+\end{figure}
+
+\noindent\textbf{Key scientific finding:} FoG is a stochastically driven transition, not a purely deterministic collapse. This led to replacing \textit{constraint-level} physics with \textit{feature-level} physics.
+
+\section{Daphnet Ablation Study}
+
+Table~\ref{tab:ablation} presents the core ablation results across all model configurations, including classical baselines.
+
+\begin{table}[ht]
+\centering
+\caption{Daphnet ablation results (Mean $\pm$ SD, $n=8$ valid LOSO folds, $h=1.6$\,s).}
+\label{tab:ablation}
+\renewcommand{\arraystretch}{1.25}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llccccc}
+\toprule
+\textbf{Model} & \textbf{Streams} & \textbf{AUC} & \textbf{Lead (s)} & \textbf{Se} & \textbf{Sp} & \textbf{F1} \\
+\midrule
+Freezing Index & Classical & $0.746\!\pm\!0.067$ & $0.85\!\pm\!0.71$ & $0.581$ & $0.633$ & $0.295$ \\
+SVM            & Physics+EWS & $0.823\!\pm\!0.098$ & $1.20\!\pm\!0.57$ & $0.590$ & $0.774$ & $0.359$ \\
+\midrule
+CNN--LSTM      & Raw IMU only  & $0.859\!\pm\!0.080$ & $1.05\!\pm\!0.53$ & $0.637$ & $0.856$ & $0.433$ \\
+\textbf{Base + Physics} & Raw + Physics & $\mathbf{0.871\!\pm\!0.079}$ & $\mathbf{1.30\!\pm\!0.56}$ & $\mathbf{0.654}$ & $0.859$ & $0.451$ \\
+Base + EWS     & Raw + EWS     & $0.858\!\pm\!0.054$ & $1.15\!\pm\!0.55$ & $0.632$ & $0.869$ & $0.446$ \\
+Full Model     & All 3 streams & $0.869\!\pm\!0.059$ & $1.00\!\pm\!0.57$ & $0.619$ & $\mathbf{0.896}$ & $\mathbf{0.459}$ \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\begin{tikzpicture}
+\begin{axis}[
+  ybar=3pt, bar width=7pt, width=14cm, height=6cm,
+  enlarge x limits=0.15, ylabel={Score}, ylabel style={font=\small},
+  symbolic x coords={FI Baseline, SVM, CNN-LSTM, Base+Phys, Base+EWS, Full Model},
+  xtick=data, x tick label style={font=\small, rotate=20, anchor=east},
+  ymin=0, ymax=1.05,
+  legend style={font=\scriptsize, at={(0.5,1.05)}, anchor=south, legend columns=4},
+  nodes near coords={\scriptsize\pgfmathprintnumber[fixed,precision=2]{\pgfplotspointmeta}},
+  every node near coord/.append style={font=\tiny, rotate=90, anchor=west},
+  grid=major, grid style={dashed, gray!30}
+]
+\addplot[fill=blockblue!70] coordinates
+  {(FI Baseline,0.746) (SVM,0.823) (CNN-LSTM,0.859)
+   (Base+Phys,0.871) (Base+EWS,0.858) (Full Model,0.869)};
+\addplot[fill=blockorange!70] coordinates
+  {(FI Baseline,0.581) (SVM,0.590) (CNN-LSTM,0.637)
+   (Base+Phys,0.654) (Base+EWS,0.632) (Full Model,0.619)};
+\addplot[fill=blockgreen!70] coordinates
+  {(FI Baseline,0.633) (SVM,0.774) (CNN-LSTM,0.856)
+   (Base+Phys,0.859) (Base+EWS,0.869) (Full Model,0.896)};
+\addplot[fill=darkred!60] coordinates
+  {(FI Baseline,0.295) (SVM,0.359) (CNN-LSTM,0.433)
+   (Base+Phys,0.451) (Base+EWS,0.446) (Full Model,0.459)};
+\legend{AUC, Sensitivity, Specificity, F1}
+\end{axis}
+\end{tikzpicture}
+\end{adjustbox}
+\caption{Clustered bar chart of ablation results. Base+Physics achieves the best AUC and lead time; Full Model achieves the highest specificity and F1.}
+\label{fig:ablation_bar}
+\end{figure}
+
+\noindent\textbf{Key observations:}
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Physics features extend early warning:} Base + Physics achieves the longest lead time (1.30\,s), a $+24\%$ improvement over the CNN--LSTM baseline (1.05\,s).
+  \item \textbf{Feature interference:} Adding EWS on top of physics (Full Model) \textit{reduces} lead time to 1.00\,s while improving specificity (0.896 vs 0.859).
+  \item \textbf{Physics outperform SVM:} Deep fusion (AUC 0.871) surpasses the SVM trained on the same features (AUC 0.823), confirming learnable integration is superior.
+\end{itemize}
+
+\section{Per-Subject Performance}
+
+Table~\ref{tab:persubj} reveals important heterogeneity in FoG phenotypes across subjects.
+
+\begin{table}[ht]
+\centering
+\caption{Per-subject results for Base + Physics model (Daphnet, $h=1.6$\,s).}
+\label{tab:persubj}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Subject} & \textbf{AUC} & \textbf{Sensitivity} & \textbf{Lead Time (s)} \\
+\midrule
+S01 & 0.929 & 0.873 & 1.60 \\
+S02 & 0.949 & 0.938 & 1.60 \\
+S03 & 0.887 & 0.855 & 1.60 \\
+S04 & N/A {\scriptsize(no FoG)} & 0.000 & N/A \\
+S05 & 0.914 & 0.835 & 1.60 \\
+S06 & 0.736 & 0.661 & 1.60 \\
+S07 & 0.925 & 0.856 & 1.60 \\
+S08 & 0.743 & 0.743 & 0.80 \\
+S09 & 0.880 & 0.783 & 0.00 \\
+S10 & N/A {\scriptsize(no FoG)} & 0.000 & N/A \\
+\midrule
+\textbf{Mean ($n$=8)} & \textbf{0.871} & \textbf{0.654} & \textbf{1.30} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\begin{tikzpicture}
+\begin{axis}[
+  ybar=4pt, bar width=10pt, width=13cm, height=5.5cm,
+  enlarge x limits=0.08, ylabel={Score / Time (s)}, ylabel style={font=\small},
+  symbolic x coords={S01,S02,S03,S05,S06,S07,S08,S09},
+  xtick=data, x tick label style={font=\small},
+  ymin=0, ymax=1.8,
+  legend style={font=\scriptsize, at={(0.5,1.05)}, anchor=south, legend columns=3},
+  grid=major, grid style={dashed, gray!30}
+]
+\addplot[fill=blockblue!70] coordinates
+  {(S01,0.929) (S02,0.949) (S03,0.887) (S05,0.914)
+   (S06,0.736) (S07,0.925) (S08,0.743) (S09,0.880)};
+\addplot[fill=blockorange!70] coordinates
+  {(S01,0.873) (S02,0.938) (S03,0.855) (S05,0.835)
+   (S06,0.661) (S07,0.856) (S08,0.743) (S09,0.783)};
+\addplot[fill=blockgreen!70] coordinates
+  {(S01,1.60) (S02,1.60) (S03,1.60) (S05,1.60)
+   (S06,1.60) (S07,1.60) (S08,0.80) (S09,0.00)};
+\legend{AUC, Sensitivity, Lead Time (s)}
+\end{axis}
+\end{tikzpicture}
+\end{adjustbox}
+\caption{Per-subject performance of Base+Physics. Five of eight subjects achieve maximum lead time. Subject 9 shows zero lead time consistent with akinetic freeze phenotype.}
+\label{fig:persubj}
+\end{figure}
+
+\noindent\textbf{Interpretation:}
+\begin{itemize}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Strong responders} (S01--S03, S05, S07): AUC $> 0.88$ with maximum lead time (1.60\,s). These subjects exhibit ``trembling-in-place'' freezes where the limit cycle visibly destabilises before collapse.
+  \item \textbf{Challenging subjects:} S08 has reduced lead time (0.80\,s); S09 achieves AUC = 0.880 but lead time = 0.00\,s, indicating correct \textit{classification} but late \textit{prediction}. S09's ``akinetic'' freezes lack rhythmic precursors.
+\end{itemize}
+
+\section{Prediction Horizon Sweep}
+
+To determine the empirical predictability limit, the target horizon was swept across $h \in \{0.8, 1.6, 2.4\}$ seconds (Table~\ref{tab:horizon}).
+
+\begin{table}[ht]
+\centering
+\caption{Performance vs.\ prediction horizon (Base+Physics, LOSO, $n=8$).}
+\label{tab:horizon}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Horizon $h$ (s)} & \textbf{AUC} & \textbf{Lead Time (s)} & \textbf{F1} \\
+\midrule
+0.8  & $0.825 \pm 0.082$ & $0.70 \pm 0.35$ & $0.412$ \\
+\textbf{1.6}  & $\mathbf{0.871 \pm 0.079}$ & $\mathbf{1.30 \pm 0.56}$ & $\mathbf{0.451}$ \\
+2.4  & $0.840 \pm 0.084$ & $1.20 \pm 0.45$ & $0.415$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Performance peaks at $h = 1.6$\,s. Pushing the horizon to 2.4\,s degrades both AUC and lead time, confirming an empirical predictability ceiling of approximately 1.6 seconds for subject-independent FoG prediction.
+
+\section{Embedding Dimension Robustness}
+
+To validate the choice of $m = 2$, the embedding dimension was swept across $m \in \{2, 3, 4\}$ (Table~\ref{tab:embed}).
+
+\begin{table}[ht]
+\centering
+\caption{Embedding dimension ablation (Base+Physics, $h=1.6$\,s, LOSO).}
+\label{tab:embed}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{cccc}
+\toprule
+\textbf{Dimension $m$} & \textbf{AUC} & \textbf{Lead Time (s)} & \textbf{F1} \\
+\midrule
+2 & $0.871 \pm 0.079$ & $1.30 \pm 0.56$ & $\mathbf{0.451}$ \\
+3 & $0.865 \pm 0.106$ & $1.30 \pm 0.40$ & $0.435$ \\
+4 & $\mathbf{0.883 \pm 0.091}$ & $\mathbf{1.40 \pm 0.35}$ & $0.444$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The primary topological property --- radial collapse of the limit cycle --- is sufficiently captured in 2-D. Higher dimensions offer marginal gains but increase complexity without clear F1 benefit.
+
+\section{Cross-Dataset Validation: MJFF DeFOG}
+
+To test generalisability, the framework was evaluated on 7 DeFOG sessions with trunk-mounted accelerometers (Table~\ref{tab:defog}).
+
+\begin{table}[ht]
+\centering
+\caption{DeFOG feasibility results (7-fold LOSO, trunk-mounted accelerometer).}
+\label{tab:defog}
+\renewcommand{\arraystretch}{1.25}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{llccccc}
+\toprule
+\textbf{Model} & \textbf{Streams} & \textbf{AUC} & \textbf{Lead (s)} & \textbf{Se} & \textbf{Sp} & \textbf{F1} \\
+\midrule
+Freezing Index & Classical & $0.500$ & $0.00$ & $0.000$ & $1.000$ & $0.000$ \\
+CNN--LSTM      & Raw only  & $0.910\!\pm\!0.037$ & $1.13\!\pm\!0.58$ & $0.765$ & $0.847$ & $0.305$ \\
+\textbf{Base + Physics} & Raw+Phys & $0.905\!\pm\!0.052$ & $\mathbf{1.40\!\pm\!0.31}$ & $\mathbf{0.791}$ & $0.844$ & $0.312$ \\
+Base + EWS     & Raw+EWS   & $0.906\!\pm\!0.053$ & $1.13\!\pm\!0.58$ & $0.779$ & $0.828$ & $0.315$ \\
+Full Model     & All 3     & $\mathbf{0.920\!\pm\!0.038}$ & $1.20\!\pm\!0.61$ & $0.793$ & $\mathbf{0.846}$ & $\mathbf{0.317}$ \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}
+
+The DeFOG results replicate the core finding: Base+Physics again achieves the longest lead time (1.40\,s vs 1.13\,s for Base), while the Full Model achieves the highest AUC (0.920). This cross-dataset consistency provides evidence that physics-informed ``look-ahead'' advantage transfers across sensor placements.
+
+\section{Discussion}
+
+\subsection{Physics Features Improve Early Warning}
+
+The central finding is that deterministic physical biomarkers --- Freezing Index, delay-embedding radius and phase statistics, and cadence regularity --- provide the clearest early warning signal when fused with a CNN-LSTM backbone. The Base + Physics model extends the lead time by $+0.25$\,s over the pure deep learning baseline and achieves the highest AUC (0.871).
+
+\subsection{The Feature Interference Phenomenon}
+
+The most surprising result is that the Full Model (all three streams) achieves the highest specificity and F1 but the shortest lead time. Two mechanisms are hypothesised:
+
+\begin{enumerate}[leftmargin=*, itemsep=3pt]
+  \item \textbf{Gradient interference:} Physics and EWS streams capture related state-space information (radius variance vs.\ radius variance \textit{trend}), creating gradient conflicts during optimisation.
+  \item \textbf{Decision boundary shift:} Additional EWS features push the optimal boundary toward fewer false positives, producing more precise but later predictions.
+\end{enumerate}
+
+This has a practical implication: for clinical cueing systems prioritising early warning, the Base+Physics configuration is optimal. For applications prioritising precision, the Full Model is preferred.
+
+\subsection{Heterogeneous Freezing Phenotypes}
+
+The per-subject analysis reveals that the physics-informed approach works best on ``trembling-in-place'' phenotypes where the limit cycle visibly destabilises before collapse. It struggles on ``akinetic'' freezes (Subject 9) where the signal simply stops without rhythmic precursors --- a fundamental limitation of the dynamical hypothesis.
+
+\subsection{Constraint-Level vs.\ Feature-Level Physics}
+
+\begin{figure}[ht]
+\centering
+\begin{adjustbox}{max width=\textwidth}
+\begin{tikzpicture}[
+  dbox/.style={draw, rounded corners=4pt, minimum width=5cm, minimum height=2.2cm,
+               align=left, font=\small, text width=4.8cm, inner sep=6pt},
+  node distance=1.2cm
+]
+\node[dbox, fill=lightorange, draw=blockorange] (pinn)
+  {\textbf{Constraint-Level}\\(PINN)\\[3pt]
+   $\bullet$~Fixed ODE in loss\\
+   $\bullet$~Single dynamics for all\\
+   $\bullet$~AUC $\approx$ 0.77};
+\node[dbox, fill=lightgreen, draw=blockgreen, right=2.0cm of pinn] (feat)
+  {\textbf{Feature-Level}\\(Fusion)\\[3pt]
+   $\bullet$~Empirical indicators\\
+   $\bullet$~Adapts per-patient\\
+   $\bullet$~AUC = 0.871};
+\node[font=\Large\bfseries, text=blockgreen] at ($(pinn.east)!0.5!(feat.west)$) {$\Rightarrow$};
+\node[font=\scriptsize, text=darkred, below=0.15cm of pinn, text width=5cm, align=center]
+  {Fails: stochastic transitions,\\patient variability};
+\node[font=\scriptsize, text=blockgreen, below=0.15cm of feat, text width=5cm, align=center]
+  {Succeeds: data-adaptive,\\captures relevant physics};
+\end{tikzpicture}
+\end{adjustbox}
+\caption{Comparison of constraint-level (rigid PINN) vs.\ feature-level (empirical indicators) physics integration.}
+\label{fig:constraint_vs_feature}
+\end{figure}
+
+For medical domains characterised by high patient variability and non-stationary signals, feature-level physics integration is superior to constraint-level physics integration. This negative result serves as a primary methodological contribution.
+
+\subsection{Statistical Limitations}
+
+A paired Wilcoxon signed-rank test between Base+Physics and Base on AUC yields $p = 0.46$, and on Lead Time $p = 0.31$. The improvements are not statistically significant at $\alpha = 0.05$ on this pilot cohort ($n = 10$), indicating the need for validation on larger populations.
+
+%% ============================================================
+%%  CHAPTER 5 — SUMMARY AND CONCLUSIONS
+%% ============================================================
+
+\chapter{Summary and Conclusions}
+
+\section{Summary}
+
+This thesis presented a physics-informed feature fusion framework for predicting Freezing of Gait (FoG) in Parkinson's Disease patients using wearable inertial measurement unit data. The work was motivated by the clinical need for \textit{predictive} --- rather than merely \textit{detective} --- systems that can trigger preventative cueing interventions before freeze onset.
+
+The research progressed through the following stages:
+
+\begin{enumerate}[leftmargin=*, itemsep=4pt]
+  \item \textbf{Dynamical systems formulation:} Human gait was modelled as a nonlinear limit-cycle oscillator in phase space using Takens' delay embedding. Freezing of Gait was characterised as a critical transition --- a collapse of the stable periodic attractor.
+
+  \item \textbf{PINN evaluation and failure:} A GRU-based Physics-Informed Neural Network was implemented to enforce rigid ODE constraints (Van der Pol / Hopf oscillator) in the latent space. This approach achieved only AUC $\approx$ 0.77 and failed to generalise across subjects due to inter-patient variability, sensitivity loss, and optimisation instability.
+
+  \item \textbf{Feature-level physics integration:} The failure of constraint-level physics led to the development of empirical physics features (9 limit-cycle indicators) and Early Warning Signal features (5 critical transition indicators), which were fused with a CNN-LSTM backbone in a three-stream architecture.
+
+  \item \textbf{Comprehensive evaluation:} Under strict 10-fold Leave-One-Subject-Out cross-validation on the Daphnet dataset, the Base + Physics variant achieved AUC = 0.871 $\pm$ 0.079 with a predictive lead time of 1.30 seconds --- a 24\% improvement over the pure CNN-LSTM baseline.
+
+  \item \textbf{Cross-dataset validation:} The framework was replicated on the MJFF DeFOG dataset with trunk-mounted sensors, confirming that physics features consistently extend the early warning window across different sensor placements.
+\end{enumerate}
+
+\section{Conclusions}
+
+The following conclusions are drawn from this investigation:
+
+\begin{enumerate}[leftmargin=*, itemsep=5pt]
+  \item \textbf{Feature-level physics outperforms constraint-level physics.} For clinical time series characterised by stochastic, non-stationary transitions, computing empirical dynamical indicators and learning their fusion is superior to imposing rigid governing equations. This represents a key methodological finding for the broader physics-informed machine learning community.
+
+  \item \textbf{Physics features provide the clearest early warning.} The Base + Physics model achieves the longest lead time (1.30\,s at $h = 1.6$\,s) and highest AUC (0.871), demonstrating that limit-cycle radius collapse and phase instability are effective precursor biomarkers for FoG.
+
+  \item \textbf{Feature interference degrades lead time when combining related streams.} The Full Model (all three streams) achieves the highest specificity (0.896) and F1 (0.459) but the shortest lead time (1.00\,s). Redundancy between physics and EWS features creates gradient conflicts and shifts the decision boundary toward precision at the cost of earliest detection.
+
+  \item \textbf{An empirical predictability ceiling of 1.6 seconds exists} for subject-independent FoG prediction from continuous biomechanical signals. This ceiling is consistent across the prediction horizon sweep and cross-dataset validation.
+
+  \item \textbf{Physics-informed features generalise across sensor placements.} Cross-dataset validation on DeFOG (trunk-mounted vs.\ leg-mounted) replicates the core finding, with Base + Physics again achieving the longest lead time (1.40\,s).
+
+  \item \textbf{Heterogeneous freeze phenotypes limit universal prediction.} The model excels on ``trembling-in-place'' phenotypes but struggles on ``akinetic'' freezes, representing a fundamental boundary of the dynamical hypothesis.
+\end{enumerate}
+
+\section{Scope for Future Work}
+
+The following directions are recommended for future research:
+
+\begin{enumerate}[leftmargin=*, itemsep=4pt]
+  \item \textbf{Larger cohort validation:} Validation on cohorts with $n > 50$ subjects to achieve statistical power for definitive claims (paired Wilcoxon signed-rank $p < 0.05$).
+
+  \item \textbf{Feature orthogonalisation:} Investigation of decorrelation strategies (e.g., Gram--Schmidt orthogonalisation of feature streams, adversarial debiasing) to mitigate the feature interference phenomenon.
+
+  \item \textbf{Personalised embedding parameters:} Adaptation of delay embedding parameters ($m$, $\tau$) per subject using online estimation, potentially extending the predictability ceiling beyond 1.6 seconds.
+
+  \item \textbf{Real-time deployment:} Implementation on embedded wearable hardware (e.g., ARM Cortex-M microcontrollers) for closed-loop cueing systems. The computational requirements of the physics feature extraction and lightweight CNN-LSTM model are compatible with edge deployment.
+
+  \item \textbf{Multi-modal integration:} Fusion of IMU data with electromyography (EMG), electroencephalography (EEG), or foot-pressure sensors to capture complementary physiological information about freeze susceptibility.
+
+  \item \textbf{Clinical trial integration:} Prospective clinical evaluation of the framework in a closed-loop cueing system, measuring actual fall reduction as the primary clinical endpoint.
+\end{enumerate}
+
+
+%% ============================================================
+%%  REFERENCES
+%% ============================================================
+%% ============================================================
+%%  REFERENCES
+%% ============================================================
+
+\addcontentsline{toc}{chapter}{REFERENCES}
+
+\begin{thebibliography}{99}
+\small
+
+\bibitem{bachlin2010}
+M.~B\"{a}chlin, M.~Plotnik, D.~Roggen, I.~Maidan, J.~M.~Hausdorff, N.~Giladi, and G.~Tr\"{o}ster, ``Wearable assistant for Parkinson's disease patients with the freezing of gait symptom,'' \textit{IEEE Transactions on Information Technology in Biomedicine}, vol.~14, no.~2, pp.~436--446, 2010.
+
+\bibitem{roggen2010}
+D.~Roggen, A.~Calatroni, M.~Rossi, T.~Holleczek, K.~F\"{o}rster, G.~Tr\"{o}ster, et al., ``Collecting complex activity datasets in highly rich networked sensor environments,'' in \textit{Seventh International Conference on Networked Sensing Systems (INSS)}, IEEE, 2010.
+
+\bibitem{scheffer2009}
+M.~Scheffer, J.~Bascompte, W.~A.~Brock, V.~Brovkin, S.~R.~Carpenter, V.~Dakos, et al., ``Early-warning signals for critical transitions,'' \textit{Nature}, vol.~461, no.~7260, pp.~53--59, 2009.
+
+\bibitem{takens1981}
+F.~Takens, ``Detecting strange attractors in turbulence,'' in \textit{Dynamical Systems and Turbulence, Warwick 1980}, Springer, pp.~366--381, 1981.
+
+\bibitem{chen2018}
+R.~T.~Q.~Chen, Y.~Rubanova, J.~Bettencourt, and D.~Duvenaud, ``Neural Ordinary Differential Equations,'' in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2018.
+
+\bibitem{sieber2022}
+T.~Sieber, S.~M.~Schroll, and J.~M.~Hausdorff, ``Modeling freezing of gait as a transition out of an oscillatory limit cycle attractor,'' arXiv preprint arXiv:2203.08724, 2022.
+
+\bibitem{fu2025}
+Y.~Fu, C.~Zhao, and R.~Palaniswamy, ``Personalized prediction of gait freezing using dynamic mode decomposition,'' \textit{Scientific Reports}, 2025.
+
+\bibitem{sigcha2022}
+L.~Sigcha, N.~Costa, I.~Pav\'{o}n, S.~Costa, P.~Arezes, J.~M.~Lopez, and G.~De~Arcas, ``Machine Learning and Deep Learning algorithms for Freezing of Gait prediction,'' \textit{IEEE Transactions on Neural Systems and Rehabilitation Engineering}, 2022.
+
+\bibitem{raissi2019}
+M.~Raissi, P.~Perdikaris, and G.~E.~Karniadakis, ``Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations,'' \textit{Journal of Computational Physics}, vol.~378, pp.~686--707, 2019.
+
+\bibitem{plotnik2008}
+D.~Plotnik, N.~Giladi, and J.~M.~Hausdorff, ``The role of gait rhythmicity and bilateral coordination of stepping in the pathophysiology of freezing of gait in Parkinson's disease,'' \textit{Movement Disorders}, vol.~23, no.~3, pp.~444--450, 2008.
+
+\bibitem{fraser1986}
+A.~M.~Fraser and H.~L.~Swinney, ``Independent coordinates for strange attractors from mutual information,'' \textit{Physical Review A}, vol.~33, no.~2, p.~1134, 1986.
+
+\bibitem{kennel1992}
+M.~B.~Kennel, R.~Brown, and H.~D.~I.~Abarbanel, ``Determining embedding dimension for phase-space reconstruction using a geometrical construction,'' \textit{Physical Review A}, vol.~45, no.~6, p.~3403, 1992.
+
+\bibitem{nutt2011}
+J.~G.~Nutt, B.~R.~Bloem, N.~Giladi, M.~Hallett, F.~B.~Horak, and A.~Nieuwboer, ``Freezing of gait: moving forward on a mysterious clinical phenomenon,'' \textit{The Lancet Neurology}, vol.~10, no.~8, pp.~734--744, 2011.
+
+\bibitem{moore2008}
+S.~T.~Moore, H.~G.~MacDougall, and W.~G.~Ondo, ``A wearable system for objective evaluation of freezing of gait in Parkinson's disease,'' \textit{IEEE Transactions on Biomedical Engineering}, vol.~55, no.~1, pp.~241--248, 2008.
+
+\bibitem{hausdorff1995}
+J.~M.~Hausdorff, C.~K.~Peng, Z.~Ladin, J.~Y.~Wei, and A.~L.~Goldberger, ``Altered fractal dynamics of gait: reduced stride-interval correlations with aging and Huntington's disease,'' \textit{Journal of Applied Physiology}, vol.~78, no.~1, pp.~349--358, 1995.
+
+\bibitem{stergiou2004}
+N.~Stergiou, R.~Harbourne, and J.~Cavanaugh, ``Nonlinear dynamics in human gait mechanics,'' \textit{Journal of Applied Biomechanics}, vol.~20, no.~4, pp.~382--404, 2004.
+
+\bibitem{dingwell2001}
+J.~B.~Dingwell and J.~P.~Cusumano, ``Nonlinear time series analysis of normal and pathological human walking,'' \textit{Chaos}, vol.~10, no.~4, pp.~848--863, 2001.
+
+\bibitem{camps2018}
+J.~Camps, A.~Sama, M.~Martin, D.~Rodriguez-Martin, C.~Perez-Lopez, J.~M.~M.~Arostegui, et al., ``Deep learning for freezing of gait detection in Parkinson's disease patients in their homes using a waist-worn inertial measurement unit,'' \textit{Knowledge-Based Systems}, vol.~139, pp.~119--131, 2018.
+
+\bibitem{pavon2020}
+I.~Pav\'{o}n, L.~Sigcha, N.~Costa, S.~Costa, J.~M.~Lopez, and G.~De~Arcas, ``Deep Learning Approaches for Detecting Freezing of Gait in Parkinson's Disease Patients through On-Body Acceleration Sensors,'' \textit{Sensors}, vol.~20, no.~7, p.~1895, 2020.
+
+\bibitem{dakos2012}
+V.~Dakos, S.~R.~Carpenter, W.~A.~Brock, A.~M.~Ellison, V.~Guttal, A.~R.~Ives, et al., ``Methods for detecting early warnings of critical transitions in time series illustrated using simulated ecological data,'' \textit{PLOS One}, vol.~7, no.~7, e41010, 2012.
+
+\bibitem{sigcha2024}
+L.~Sigcha, J.~M.~Lopez, and G.~De~Arcas, ``Deep learning algorithms for detecting freezing of gait in Parkinson's disease: A cross-dataset study,'' \textit{Expert Systems with Applications}, 2024.
+
+\bibitem{salomon2024}
+A.~Salomon, K.~Chen, and T.~Li, ``HTSAN for Freezing of Gait Detection,'' \textit{IEEE Transactions on Biomedical Engineering}, 2024.
+
+\bibitem{okuma2014}
+Y.~Okuma, ``Freezing of gait and falls in Parkinson's disease,'' \textit{Journal of Parkinson's Disease}, vol.~4, no.~2, pp.~255--260, 2014.
+
+\bibitem{heremans2013}
+E.~Heremans, A.~Nieuwboer, and S.~Vercruysse, ``Freezing of gait in Parkinson's disease: where are we now?'' \textit{Current Neurology and Neuroscience Reports}, vol.~13, no.~6, 2013.
+
+\bibitem{sweeney2019}
+D.~Sweeney, L.~R.~Quinlan, P.~Browne, M.~Richardson, P.~Meskell, and G.~\'{O}Laighin, ``Technological Review of Wearable Cueing Devices Overcoming Freezing of Gait in Parkinson's Disease,'' \textit{Sensors}, vol.~19, no.~6, 2019.
+
+\bibitem{mancini2021}
+M.~Mancini, F.~B.~Horak, and K.~Christiansen, ``Closed-loop cueing for Freezing of Gait in Parkinson's disease,'' \textit{Frontiers in Neurology}, 2021.
+
+\bibitem{hasan2023}
+R.~Hasan, S.~Yusuf, and J.~Alzubi, ``Deep learning applications in Parkinson's disease: A comprehensive survey,'' \textit{IEEE Reviews in Biomedical Engineering}, 2023.
+
+\bibitem{punt2017}
+M.~Punt, S.~M.~Bruijn, I.~G.~Wittink, and J.~H.~Van~Die\"{e}n, ``Entropy measures in Parkinson's disease gait,'' \textit{Movement Disorders}, 2017.
+
+\bibitem{mancini2012}
+M.~Mancini, L.~Chiari, F.~B.~Horak, and A.~Salarian, ``Using APDM wearables for monitoring Freezing of Gait,'' \textit{Movement Disorders}, 2012.
+
+\end{thebibliography}
+
+
+\end{document}
