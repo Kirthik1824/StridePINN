@@ -31,7 +31,7 @@
 \usepackage{subcaption}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\usepackage[titles]{tocloft}          % Handle TOC dot leaders and styling [titles] avoids conflict with titlesec
+\usepackage{tocloft}
 \usepackage{adjustbox}
 \usepackage[hidelinks]{hyperref}
 \usepackage{cite}
@@ -103,10 +103,10 @@
 %%  PLACEHOLDERS — Fill these on Overleaf
 %% ============================================================
 \newcommand{\ThesisTitle}{Physics-Informed Gait Modeling for Parkinson's Disease: Enhancing Early Warning of Freezing of Gait via Feature Fusion}
-\newcommand{\StudentName}{$<$YOUR FULL NAME$>$}
-\newcommand{\RollNumber}{$<$YOUR ROLL NUMBER$>$}
+\newcommand{\StudentName}{Kirthik M}
+\newcommand{\RollNumber}{110122051}
 \newcommand{\GuideName}{Dr.\ D.\ Ezhilarasi}
-\newcommand{\HoDName}{$<$HEAD OF DEPARTMENT NAME$>$}
+\newcommand{\HoDName}{Dr.\ K.\ Srinivasan}
 \newcommand{\DeptName}{Instrumentation and Control Engineering}
 \newcommand{\SubmissionMonth}{MAY 2026}
 
@@ -158,8 +158,7 @@ the award of the degree of}
 
 %% ----- NITT Logo Placeholder -----
 %% Upload NITT_Logo.png to Overleaf and uncomment:
-% \includegraphics[width=1.25in]{NITT_Logo.png}
-\framebox[1.25in]{\rule{0pt}{1.25in}\textbf{NITT Logo}}
+\includegraphics[width=1.25in]{NITT Logo.png}
 
 \vspace{0.4cm}
 
@@ -251,16 +250,18 @@ Head of the Department
 \vspace{0.5cm}
 
 \begin{doublespacing}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1em}
 Freezing of Gait (FoG) is a debilitating motor symptom of Parkinson's Disease (PD) characterised by sudden, involuntary cessation of movement during walking, leading to increased fall risk and reduced quality of life. While deep learning models have achieved high classification accuracy during FoG events, predicting these episodes \textit{prior} to clinical onset remains a significant challenge. This thesis presents a physics-informed feature fusion framework that models gait as a nonlinear limit-cycle oscillator and characterises Freezing of Gait as a critical dynamical transition --- a collapse of the stable attractor in phase space.
 
 The proposed framework employs a three-stream CNN-LSTM fusion architecture integrating: (1) raw inertial measurement unit (IMU) temporal patterns via a CNN-LSTM backbone, (2) deterministic physics features derived from Takens' delay embedding (Freezing Index, phase-space radius, phase variance, cadence regularity, signal energy), and (3) Early Warning Signal (EWS) features based on critical transition theory (radius variance trend, AR(1) coefficient, phase velocity drift, FoGI slope, spectral entropy). This architecture was developed after the documented failure of rigid Physics-Informed Neural Network (PINN) constraints, which could not generalise across diverse patient gait signatures due to the stochastic, non-stationary nature of freeze transitions.
 
 Evaluated under strict 10-fold Leave-One-Subject-Out (LOSO) cross-validation on the Daphnet dataset ($n = 10$ subjects), the Base + Physics variant achieves an AUC of 0.871 $\pm$ 0.079 with a predictive lead time of 1.30 seconds at a 1.6-second prediction horizon --- a 24\% improvement over the pure CNN-LSTM baseline (1.05\,s). The study identifies a feature interference phenomenon where combining all three streams shifts the decision boundary toward higher specificity at the cost of lead time. A cross-dataset feasibility test on the MJFF DeFOG dataset replicates the core finding: physics features consistently extend the early warning window across different sensor placements.
-\end{doublespacing}
 
 \vspace{0.8cm}
 
-\noindent\textbf{Keywords:} Freezing of Gait, Parkinson's Disease, Physics-Informed Feature Fusion, Limit-Cycle Dynamics, Early Warning Signals, CNN-LSTM
+\textbf{Keywords:} Freezing of Gait, Parkinson's Disease, Physics-Informed Feature Fusion, Limit-Cycle Dynamics, Early Warning Signals, CNN-LSTM
+\end{doublespacing}
 
 \newpage
 
@@ -297,42 +298,48 @@ Finally, I express my heartfelt thanks to my parents and family for their uncond
 
 %% ---- TABLE OF CONTENTS ----
 \newpage
-{\clearpage\vspace*{1in}}
-\renewcommand{\contentsname}{%
-  \begin{center}%
-  \hspace*{-0.25in}%
-  \begin{minipage}{\dimexpr\textwidth+0.5in\relax}%
-  \centering\fontsize{14}{16}\selectfont\bfseries TABLE OF CONTENTS%
-  \end{minipage}%
-  \end{center}%
-}
-\tableofcontents
+\vspace*{1in}
+\begin{center}
+\hspace*{-0.25in}
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
+{\fontsize{14}{16}\selectfont\bfseries TABLE OF CONTENTS}
+\end{minipage}
+\end{center}
+\vspace{1cm}
+\makeatletter
+\@starttoc{toc}
+\makeatother
 \newpage
 
 %% ---- LIST OF TABLES ----
 \vspace*{1in}
-\renewcommand{\listtablename}{%
-  \begin{center}%
-  \hspace*{-0.25in}%
-  \begin{minipage}{\dimexpr\textwidth+0.5in\relax}%
-  \centering\fontsize{14}{16}\selectfont\bfseries LIST OF TABLES%
-  \end{minipage}%
-  \end{center}%
-}
-\listoftables
+\begin{center}
+\hspace*{-0.25in}
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
+{\fontsize{14}{16}\selectfont\bfseries LIST OF TABLES}
+\end{minipage}
+\end{center}
+\vspace{1cm}
+\makeatletter
+\@starttoc{lot}
+\makeatother
 \newpage
 
 %% ---- LIST OF FIGURES ----
 \vspace*{1in}
-\renewcommand{\listfigurename}{%
-  \begin{center}%
-  \hspace*{-0.25in}%
-  \begin{minipage}{\dimexpr\textwidth+0.5in\relax}%
-  \centering\fontsize{14}{16}\selectfont\bfseries LIST OF FIGURES%
-  \end{minipage}%
-  \end{center}%
-}
-\listoffigures
+\begin{center}
+\hspace*{-0.25in}
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
+{\fontsize{14}{16}\selectfont\bfseries LIST OF FIGURES}
+\end{minipage}
+\end{center}
+\vspace{1cm}
+\makeatletter
+\@starttoc{lof}
+\makeatother
 \newpage
 
 %% ---- ABBREVIATIONS ----
