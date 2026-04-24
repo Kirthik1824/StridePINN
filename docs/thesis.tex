@@ -31,7 +31,7 @@
 \usepackage{subcaption}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\usepackage{tocloft}
+\usepackage[titles]{tocloft}          % Handle TOC dot leaders and styling [titles] avoids conflict with titlesec
 \usepackage{adjustbox}
 \usepackage[hidelinks]{hyperref}
 \usepackage{cite}
@@ -297,48 +297,42 @@ Finally, I express my heartfelt thanks to my parents and family for their uncond
 
 %% ---- TABLE OF CONTENTS ----
 \newpage
-\vspace*{1in}
-\begin{center}
-\hspace*{-0.25in}
-\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
-\centering
-{\fontsize{14}{16}\selectfont\bfseries TABLE OF CONTENTS}
-\end{minipage}
-\end{center}
-\vspace{1cm}
-\makeatletter
-\@starttoc{toc}
-\makeatother
+{\clearpage\vspace*{1in}}
+\renewcommand{\contentsname}{%
+  \begin{center}%
+  \hspace*{-0.25in}%
+  \begin{minipage}{\dimexpr\textwidth+0.5in\relax}%
+  \centering\fontsize{14}{16}\selectfont\bfseries TABLE OF CONTENTS%
+  \end{minipage}%
+  \end{center}%
+}
+\tableofcontents
 \newpage
 
 %% ---- LIST OF TABLES ----
 \vspace*{1in}
-\begin{center}
-\hspace*{-0.25in}
-\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
-\centering
-{\fontsize{14}{16}\selectfont\bfseries LIST OF TABLES}
-\end{minipage}
-\end{center}
-\vspace{1cm}
-\makeatletter
-\@starttoc{lot}
-\makeatother
+\renewcommand{\listtablename}{%
+  \begin{center}%
+  \hspace*{-0.25in}%
+  \begin{minipage}{\dimexpr\textwidth+0.5in\relax}%
+  \centering\fontsize{14}{16}\selectfont\bfseries LIST OF TABLES%
+  \end{minipage}%
+  \end{center}%
+}
+\listoftables
 \newpage
 
 %% ---- LIST OF FIGURES ----
 \vspace*{1in}
-\begin{center}
-\hspace*{-0.25in}
-\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
-\centering
-{\fontsize{14}{16}\selectfont\bfseries LIST OF FIGURES}
-\end{minipage}
-\end{center}
-\vspace{1cm}
-\makeatletter
-\@starttoc{lof}
-\makeatother
+\renewcommand{\listfigurename}{%
+  \begin{center}%
+  \hspace*{-0.25in}%
+  \begin{minipage}{\dimexpr\textwidth+0.5in\relax}%
+  \centering\fontsize{14}{16}\selectfont\bfseries LIST OF FIGURES%
+  \end{minipage}%
+  \end{center}%
+}
+\listoffigures
 \newpage
 
 %% ---- ABBREVIATIONS ----
