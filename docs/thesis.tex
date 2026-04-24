@@ -249,9 +249,7 @@ Head of the Department
 
 \vspace{0.5cm}
 
-\begin{doublespacing}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{1em}
+\begin{onehalfspacing}
 Freezing of Gait (FoG) is a debilitating motor symptom of Parkinson's Disease (PD) characterised by sudden, involuntary cessation of movement during walking, leading to increased fall risk and reduced quality of life. While deep learning models have achieved high classification accuracy during FoG events, predicting these episodes \textit{prior} to clinical onset remains a significant challenge. This thesis presents a physics-informed feature fusion framework that models gait as a nonlinear limit-cycle oscillator and characterises Freezing of Gait as a critical dynamical transition --- a collapse of the stable attractor in phase space.
 
 The proposed framework employs a three-stream CNN-LSTM fusion architecture integrating: (1) raw inertial measurement unit (IMU) temporal patterns via a CNN-LSTM backbone, (2) deterministic physics features derived from Takens' delay embedding (Freezing Index, phase-space radius, phase variance, cadence regularity, signal energy), and (3) Early Warning Signal (EWS) features based on critical transition theory (radius variance trend, AR(1) coefficient, phase velocity drift, FoGI slope, spectral entropy). This architecture was developed after the documented failure of rigid Physics-Informed Neural Network (PINN) constraints, which could not generalise across diverse patient gait signatures due to the stochastic, non-stationary nature of freeze transitions.
@@ -260,8 +258,8 @@ Evaluated under strict 10-fold Leave-One-Subject-Out (LOSO) cross-validation on 
 
 \vspace{0.8cm}
 
-\textbf{Keywords:} Freezing of Gait, Parkinson's Disease, Physics-Informed Feature Fusion, Limit-Cycle Dynamics, Early Warning Signals, CNN-LSTM
-\end{doublespacing}
+\noindent\textbf{Keywords:} Freezing of Gait, Parkinson's Disease, Physics-Informed Feature Fusion, Limit-Cycle Dynamics, Early Warning Signals, CNN-LSTM
+\end{onehalfspacing}
 
 \newpage
 
