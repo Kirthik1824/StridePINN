@@ -15,7 +15,7 @@
 \documentclass[12pt,a4paper,oneside]{report}
 
 %% ---- Packages ----
-\usepackage[a4paper, top=25.4mm, bottom=25.4mm, left=38.1mm, right=25.4mm]{geometry}
+\usepackage[a4paper, top=1in, bottom=1in, left=1.5in, right=1in]{geometry}
 \usepackage{times}                    % Times New Roman
 \usepackage{setspace}                 % 1.5 spacing
 \usepackage{graphicx}
@@ -25,7 +25,8 @@
 \usepackage{multirow}
 \usepackage{longtable}
 \usepackage{enumitem}
-\usepackage{parskip}
+\usepackage{indentfirst}              % Indent first paragraph of sections
+\setlength{\parindent}{1.27cm}        % Standard 0.5 inch indent
 \usepackage{xcolor}
 \usepackage{caption}
 \usepackage{subcaption}
@@ -65,10 +66,11 @@
 
 %% ---- Chapter/Section formatting per NITT guidelines ----
 %% Chapters: 14pt bold, centered, ALL CAPS
+%% Chapters: 14pt bold, centered on PHYSICAL page
 \titleformat{\chapter}[display]
   {\normalfont\fontsize{14}{16}\bfseries\centering}
-  {\MakeUppercase{\chaptertitlename}\ \thechapter}{14pt}
-  {\fontsize{14}{16}\bfseries\MakeUppercase}
+  {\hspace*{-0.25in}\begin{minipage}{\dimexpr\textwidth+0.5in\relax}\centering\MakeUppercase{\chaptertitlename}\ \thechapter\end{minipage}}{14pt}
+  {\hspace*{-0.25in}\begin{minipage}{\dimexpr\textwidth+0.5in\relax}\centering\fontsize{14}{16}\bfseries\MakeUppercase\end{minipage}}
 \titlespacing*{\chapter}{0pt}{-20pt}{20pt}
 
 %% Sections: 12pt bold, left aligned, ALL CAPS
@@ -123,6 +125,9 @@
 \thispagestyle{empty}
 
 \begin{center}
+\hspace*{-0.25in} % Compensate for binding offset to center on physical page
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
 
 \vspace*{0.5cm}
 
@@ -157,7 +162,6 @@ the award of the degree of}
 \vspace{1.2cm}
 
 %% ----- NITT Logo Placeholder -----
-%% Upload NITT_Logo.png to Overleaf and uncomment:
 % \includegraphics[width=1.25in]{NITT_Logo.png}
 \framebox[1.25in]{\rule{0pt}{1.25in}\textbf{NITT Logo}}
 
@@ -171,7 +175,7 @@ TIRUCHIRAPPALLI -- 620015}
 \vspace{0.5cm}
 
 {\fontsize{14}{16}\selectfont\bfseries \SubmissionMonth}
-
+\end{minipage}
 \end{center}
 
 \newpage
@@ -185,7 +189,11 @@ TIRUCHIRAPPALLI -- 620015}
 \thispagestyle{empty}
 
 \begin{center}
+\hspace*{-0.25in}
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
 {\fontsize{14}{16}\selectfont\bfseries BONAFIDE CERTIFICATE}
+\end{minipage}
 \end{center}
 
 \vspace{1.5cm}
@@ -242,7 +250,11 @@ Head of the Department
 %% ============================================================
 
 \begin{center}
+\hspace*{-0.25in}
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
 {\fontsize{14}{16}\selectfont\bfseries ABSTRACT}
+\end{minipage}
 \end{center}
 
 \vspace{0.5cm}
@@ -266,7 +278,11 @@ Evaluated under strict 10-fold Leave-One-Subject-Out (LOSO) cross-validation on 
 %% ============================================================
 
 \begin{center}
+\hspace*{-0.25in}
+\begin{minipage}{\dimexpr\textwidth+0.5in\relax}
+\centering
 {\fontsize{14}{16}\selectfont\bfseries ACKNOWLEDGEMENTS}
+\end{minipage}
 \end{center}
 
 \vspace{0.5cm}
@@ -307,7 +323,7 @@ Finally, I express my heartfelt thanks to my parents and family for their uncond
 %%  LIST OF ABBREVIATIONS
 %% ============================================================
 
-\chapter*{LIST OF ABBREVIATIONS}
+\chapter*{\hspace*{-0.25in}\begin{minipage}{\dimexpr\textwidth+0.5in\relax}\centering LIST OF ABBREVIATIONS\end{minipage}}
 \addcontentsline{toc}{chapter}{LIST OF ABBREVIATIONS}
 
 \vspace{0.5cm}
